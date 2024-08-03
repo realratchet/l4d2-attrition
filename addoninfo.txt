@@ -1,0 +1,27 @@
+// The addoninfo.txt file is a metadata file required by all Source Engine Add-ons.
+
+"AddonInfo"
+{
+    addonSteamAppID         550  // Steam App ID for Left 4 Dead
+    addontitle              "Attrition"  // Add-on title for the Add-ons list (~20 chars max)
+    addonversion            13  // Version number of the add-on (<major>.<minor>)
+    addontagline            "Survive the scarcity, strategize your survival."  // Add-on tagline (~100 chars max)
+    addonauthor             "Ratchet"  // Name/alias of the author
+    addonContent_Versus     0  // Indicates if the add-on includes Versus mode content
+    addonauthorSteamID      "STEAM_0:1:16214397"  // Steam ID of the author
+    addonContent_Campaign   0  // Indicates if the add-on includes a campaign with multiple connected maps
+
+    // Short description for the Add-on list screen
+    addonDescription        "In Attrition, survivors face a scarcity of critical resources, including Molotovs, medkits, and pills, requiring careful management and strategy. Each special infected encounter may slightly increase item availability, but overall, survivors must reach the safehouse with limited supplies and heightened challenges."
+
+    addonContent_BackgroundMovie   0  // Provides a replacement for the background movie
+    addonContent_Survivor          0  // Provides a new survivor model (0=false, 1=true, or specific single character, e.g., "Francis")
+    addonContent_BossInfected       0  // Provides a new boss infected model
+    addonContent_CommonInfected    0  // Provides a new common infected model
+    addonContent_WeaponModel      0  // Provides a new appearance for existing weapons (does not change their function)
+    addonContent_weapon          0  // Provides new weapons or functionality (e.g., guns, explosives, booby traps)
+    addonContent_Skin             0  // 0 if no new skin textures for existing models, 1 if multiple skin packs, or specific single skin
+    addonContent_Spray            0  // Provides new sprays
+    addonContent_Map             0  // Indicates if the add-on provides a standalone map
+    addonContent_Script          1  // Includes scripts
+}

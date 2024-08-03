@@ -1,0 +1,55 @@
+"attrition"
+{ 
+    "DisplayTitle"    "Attrition"
+    "Description"    "In Attrition, survivors face a scarcity of critical resources, including Molotovs, medkits, and pills, requiring careful management and strategy. Each special infected encounter may slightly increase item availability, but overall, survivors must reach the safehouse with limited supplies and heightened challenges."
+    "Image"        "maps/any"
+    "Author"    "Ratchet"
+    
+    "base"        "coop"
+    "maxplayers"    "4"
+    
+    "x360ctx"    "0"
+    "x360matchrule"        "0"
+    "x360presence"        "5"
+    "x360presence:"
+    {
+        "network:offline"    "11"
+        "play:commentary"    "3"
+        "play:credits"        "2"
+    }
+
+    "hasdifficulty"        "1"
+
+    convar
+    {
+        "sv_disable_glow_survivors" 1
+        "sv_disable_glow_faritems" 1
+        
+        "sv_infected_ceda_vomitjar_probability"    0
+        "sv_infected_riot_control_tonfa_probability" 0
+        "sv_force_time_of_day"    0
+        "director_adrenaline_density" 1
+        "director_defibrillator_density" 1
+        "director_force_tank" 1
+
+        "z_hunter_limit" 4
+        "z_smoker_limit" 3
+        "z_spitter_limit" 1
+        "z_charger_limit" 1
+        "z_jockey_limit" 1
+        "z_boomer_limit" 1
+
+        "z_minion_limit" 5
+
+        "z_witch_flashlight_range" 1200
+        "z_witch_health" 2000
+        "z_witch_personal_space" 400
+        "z_witch_speed" "800"
+        "z_witch_threat_hostile_range" 1000
+        "z_witch_threat_normal_range" 800
+
+        "director_vomitjar_density" 1.0
+        "director_upgradepack_density" 1.0
+        "director_convert_pills" 0
+    }
+}
