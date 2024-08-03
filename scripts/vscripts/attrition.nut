@@ -188,9 +188,9 @@ DirectorOptions <-
 
     HunterLimit = 4
     SmokerLimit = 3
-    ChargerLimit = 0
-    JockeyLimit = 0
-    SpitterLimit = 0
+    ChargerLimit = 1
+    JockeyLimit = 1
+    SpitterLimit = 1
     BoomerLimit = 1
     TankLimit = 3
     WitchLimit = 5
