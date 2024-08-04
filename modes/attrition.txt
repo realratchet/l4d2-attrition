@@ -1,6 +1,6 @@
 "attrition"
 { 
-    "DisplayTitle"    "Attrition"
+    "DisplayTitle"    "Attrition (dev)"
     "Description"    "In Attrition, survivors face a scarcity of critical resources, including Molotovs, medkits, and pills, requiring careful management and strategy. Each special infected encounter may slightly increase item availability, but overall, survivors must reach the safehouse with limited supplies and heightened challenges."
     "Image"        "maps/any"
     "Author"    "Ratchet"
@@ -31,6 +31,7 @@
         "director_adrenaline_density" 1
         "director_defibrillator_density" 1
         "director_force_tank" 1
+        
 
         "z_hunter_limit" 4
         "z_smoker_limit" 3
@@ -42,7 +43,6 @@
         "z_minion_limit" 5
 
         "z_witch_flashlight_range" 1200
-        "z_witch_health" 2000
         "z_witch_personal_space" 400
         "z_witch_speed" "800"
         "z_witch_threat_hostile_range" 1000

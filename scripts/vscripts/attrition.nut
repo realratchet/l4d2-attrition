@@ -1,14 +1,32 @@
 //-----------------------------------------------------
 Msg("Activating Attrition mutation\n");
 
+if ( !IsModelPrecached( "models/infected/hulk_dlc3.mdl" ) )
+    PrecacheModel( "models/infected/hulk_dlc3.mdl" );
+
 MutationState <-
 {
     MolotovsSpawns = 2
-    Tier2Spawns = 1
+    Tier2Spawns = 2
     MedkitSpawns = 2
     PillSpawns = 5
     PipeSpawns = 3
+    IsFinale = false
+    TankSpawnDelay = 0
+    NextTankIsSpecial = false
 }
+
+function OnGameEvent_finale_start( params )
+{
+    SessionState.IsFinale = true
+}
+
+function OnGameEvent_gauntlet_finale_start( params )
+{
+    SessionState.IsFinale = true
+}
+
+
 
 //function OnGameEvent_tank_killed( params )
 //{
@@ -73,22 +91,11 @@ function OnGameEvent_player_death(params)
     local attacker = null
     local victimClass = null
 
-    if ("userid" in params)
-    {
-        victim = GetPlayerFromUserID(params["userid"]);
-    }
-    else if ("entityid" in params)
-    {
-        victim = EntIndexToHScript(params["entityid"]);
-    }
-    if ("attacker" in params)
-    {
-        attacker = GetPlayerFromUserID(params["attacker"]);
-    }
-    else if ("attackerentid" in params)
-    {
-        attacker = EntIndexToHScript(params["attackerentid"]);
-    }
+    if ("userid" in params) victim = GetPlayerFromUserID(params["userid"]);
+    else if ("entityid" in params) victim = EntIndexToHScript(params["entityid"]);
+
+    if ("attacker" in params) attacker = GetPlayerFromUserID(params["attacker"]);
+    else if ("attackerentid" in params) attacker = EntIndexToHScript(params["attackerentid"]);
 
     if (victim.GetClassname() != "infected")
     {
@@ -96,24 +103,20 @@ function OnGameEvent_player_death(params)
         {
             if (attacker != null && attacker.IsPlayer() && attacker.GetZombieType() == 9)
             {
-                if (victim.GetZombieType() == 8) // tank
-                {
-                    MutationState.MolotovsSpawns = MutationState.MolotovsSpawns + 0.5;
-                    MutationState.MedkitSpawns = MutationState.MedkitSpawns + 0.5;
-                    MutationState.PillSpawns = MutationState.PillSpawns + 1;
-                }
-                else
-                {
-                    if (victim.GetZombieType() == 7) // witch
-                    {
-                        MutationState.MedkitSpawns = MutationState.MedkitSpawns + 0.5;
-                        MutationState.PillSpawns = MutationState.PillSpawns + 1;
-                    }
-                    else
-                    {
-                        MutationState.PillSpawns = MutationState.PillSpawns + 0.25;
-                        MutationState.PipeSpawns = MutationState.PillSpawns + 0.5;
-                    }
+                switch (victim.GetZombieType()) {
+                    case 7: // witch
+                        SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5;
+                        SessionState.PillSpawns = SessionState.PillSpawns + 1;
+                        break;
+                    case 8: // tank
+                        SessionState.MolotovsSpawns = SessionState.MolotovsSpawns + 0.5;
+                        SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5;
+                        SessionState.PillSpawns = SessionState.PillSpawns + 1;
+                        break;
+                    default: // si
+                        SessionState.PillSpawns = SessionState.PillSpawns + 0.25;
+                        SessionState.PipeSpawns = SessionState.PillSpawns + 0.5;
+                        break;
                 }
             }
         }
@@ -127,18 +130,10 @@ function OnGameEvent_witch_spawn(params)
 
     switch (Convars.GetStr("z_difficulty").tolower())
     {
-        case "easy":
-            health = 1000;
-            break;
-        case "normal":
-            health = 1500;
-            break;
-        case "hard":
-            health = 2000;
-            break;
-        case "impossible":
-            health = 2500;
-            break;
+        case "easy": health = 1000; break;
+        case "normal": health = 1500; break;
+        case "hard": health = 2000; break;
+        case "impossible": health = 2500; break;
     }
     witch.SetMaxHealth(health)
     witch.SetHealth(health)
@@ -150,21 +145,34 @@ function OnGameEvent_tank_spawn(params)
     local health = 0
     switch (Convars.GetStr("z_difficulty").tolower())
     {
-        case "easy":
-            health = 10000;
-            break;
-        case "normal":
-            health = 15000;
-            break;
-        case "hard":
-            health = 20000;
-            break;
-        case "impossible":
-            health = 30000;
-            break;
+        case "easy": health = 10000; break;
+        case "normal": health = 15000; break;
+        case "hard": health = 20000; break;
+        case "impossible": health = 30000;  break;
     }
+
+    if(SessionState.NextTankIsSpecial) {
+        SessionState.NextTankIsSpecial = false
+
+        switch (Convars.GetStr("z_difficulty").tolower())
+        {
+            case "easy": health = 5000; break;
+            case "normal": health = 10000; break;
+            case "hard": health = 15000; break;
+            case "impossible": health = 20000;  break;
+        }
+
+        tank.SetModel("models/infected/hulk_dlc3.mdl")
+    }
+
     tank.SetMaxHealth(health)
     tank.SetHealth(health)
+
+    if(SessionState.IsFinale && Time() > SessionState.TankSpawnDelay) {
+        SessionState.NextTankIsSpecial = true
+        SessionState.TankSpawnDelay = Time() + 2 // prevent filling server with tanks
+        ZSpawn({ type = 8 })
+    }
 }
 
 function OnGameEvent_spawner_give_item(params)
@@ -175,6 +183,11 @@ function OnGameEvent_spawner_give_item(params)
     // Msg(NetProps + "\n");
     // Msg(NetProps.HasProp(ent, "m_weaponID") + "\n");
     ent.Kill();
+}
+
+function OnGameEvent_triggered_car_alarm( params )
+{
+    ZSpawn({ type = 8 })
 }
 
 DirectorOptions <-
@@ -198,11 +211,14 @@ DirectorOptions <-
     CommonLimit = 50
 
     tier2weapons =
-    [
-        "weapon_rifle",
-        "weapon_hunting_rifle",
-        "weapon_autoshotgun",
-    ]
+    {
+        weapon_rifle = 1
+        weapon_hunting_rifle = 1
+        weapon_autoshotgun = 1
+        weapon_rifle_spawn = 1
+        weapon_hunting_rifle_spawn = 1
+        weapon_autoshotgun_spawn = 1
+    }
 
     // convert items that aren't useful
     weaponsToConvert =
@@ -224,9 +240,7 @@ DirectorOptions <-
     function ConvertWeaponSpawn(classname)
     {
         if (classname in weaponsToConvert)
-        {
             return weaponsToConvert[classname];
-        }
 
         return 0;
     }
@@ -249,59 +263,51 @@ DirectorOptions <-
         weapon_shotgun_spas = 0
         weapon_sniper_military = 0
         weapon_rifle_desert = 0
+        weapon_upgradepack_explosive = 0
+        weapon_upgradepack_incendiary = 0
     }
 
     function AllowWeaponSpawn(classname)
     {
         if (classname in weaponsToRemove)
-        {
             return false;
-        }
 
-        if (classname == "weapon_molotov")
+        if (classname.find("weapon_molotov") != null)
         {
             if (SessionState.MolotovsSpawns < 1)
-            {
                 return false;
-            }
 
             SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1;
         }
 
-        if (classname == "weapon_pipe_bomb")
+        if (classname.find("weapon_pipe_bomb") != null)
         {
             if (SessionState.PipeSpawns < 1)
-            {
                 return false;
-            }
+
             SessionState.PipeSpawns = SessionState.PipeSpawns - 1;
         }
 
-        if (classname == "weapon_pain_pills")
+        if (classname.find("weapon_pain_pills") != null)
         {
             if (SessionState.PillSpawns < 1)
-            {
                 return false;
-            }
+
             SessionState.PillSpawns = SessionState.PillSpawns - 1;
         }
 
         if (classname in tier2weapons)
         {
             if (SessionState.Tier2Spawns < 1)
-            {
                 return false;
-            }
 
             SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1;
         }
 
-        if (classname == "weapon_first_aid_kit_spawn" || classname == "weapon_first_aid_kit")
+        if (classname.find("weapon_first_aid_kit") != null)
         {
             if (SessionState.MedkitSpawns < 1)
-            {
                 return false;
-            }
 
             SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1;
         }
@@ -317,9 +323,8 @@ DirectorOptions <-
     function GetDefaultItem(idx)
     {
         if (idx < DefaultItems.len())
-        {
             return DefaultItems[idx];
-        }
+
         return 0;
     }
 }
