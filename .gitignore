@@ -1,1 +1,3 @@
 *.vpk
+compile/
+compile.sh

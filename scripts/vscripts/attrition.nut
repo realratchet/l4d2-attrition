@@ -4,17 +4,8 @@ Msg("Activating Attrition mutation\n");
 if ( !IsModelPrecached( "models/infected/hulk_dlc3.mdl" ) )
     PrecacheModel( "models/infected/hulk_dlc3.mdl" );
 
-MutationState <-
-{
-    MolotovsSpawns = 2
-    Tier2Spawns = 2
-    MedkitSpawns = 2
-    PillSpawns = 5
-    PipeSpawns = 3
-    IsFinale = false
-    TankSpawnDelay = 0
-    NextTankIsSpecial = false
-}
+if ( !IsModelPrecached( "models/infected/witch_bride.mdl" ) )
+    PrecacheModel( "models/infected/witch_bride.mdl" );
 
 function OnGameEvent_finale_start( params )
 {
@@ -26,21 +17,17 @@ function OnGameEvent_gauntlet_finale_start( params )
     SessionState.IsFinale = true
 }
 
-
-
-//function OnGameEvent_tank_killed( params )
-//{
-//    MutationState.MolotovsSpawns = MutationState.MolotovsSpawns + 0.5;
-//    MutationState.MedkitSpawns = MutationState.MedkitSpawns + 0.5;
-//    Msg("ATTRITION: Tank spawned, bonus spawns.\n");
-//}
-//
-//function OnGameEvent_witch_killed( params )
-//{
-//    MutationState.MolotovsSpawns = MutationState.MolotovsSpawns + 0.5;
-//    MutationState.MedkitSpawns = MutationState.MedkitSpawns + 0.5;
-//    Msg("ATTRITION: Tank spawned, bonus spawns.\n");
-//}
+MutationState <-
+{
+    MolotovsSpawns = 2
+    Tier2Spawns = 2
+    MedkitSpawns = 2
+    PillSpawns = 5
+    PipeSpawns = 3
+    IsFinale = false
+    TankSpawnDelay = 0
+    NextTankIsSpecial = false
+}
 
 if (!Director.IsSessionStartMap())
 {
@@ -85,6 +72,104 @@ function OnGameEvent_survivor_rescued(params)
     player.SetHealthBuffer(49);
 }
 
+function OnTankDeath(infected)
+{
+    SessionState.MolotovsSpawns = SessionState.MolotovsSpawns + 0.5
+    SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5
+    SessionState.PillSpawns = SessionState.PillSpawns + 1
+
+    local spawnTable = { origin = infected.GetOrigin(), angles = infected.GetAngles().ToKVString() }
+
+    if(!SessionState.IsFinale && RandomInt(1, 10) <= 5)
+        ZSpawn({ type = 11 })
+
+    if(SessionState.PillSpawns >= 1) {
+        SpawnEntityFromTable("weapon_pain_pills", spawnTable)
+        SessionState.PillSpawns = SessionState.PillSpawns - 1
+    }
+
+    if(RandomInt(1, 10) > 9) { // spawn nothing
+        // Msg("------------------------------\n")
+        // Msg("ATTRITION STATE\n")
+        // Msg("------------------------------\n")
+        // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
+        // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
+        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+        // Msg("------------------------------\n")
+        return
+    }
+
+
+    if(RandomInt(0, 3) <= 1 && SessionState.MolotovsSpawns >= 1) {
+        SpawnEntityFromTable("weapon_molotov", spawnTable)
+        SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1
+    } else if(SessionState.MedkitSpawns >= 1) {
+        SpawnEntityFromTable("weapon_first_aid_kit", spawnTable)
+        SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1
+    }
+
+    // Msg("------------------------------\n")
+    // Msg("ATTRITION STATE\n")
+    // Msg("------------------------------\n")
+    // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
+    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
+    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+    // Msg("------------------------------\n")
+}
+
+function OnWitchDeath(infected)
+{
+    SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5
+    SessionState.PillSpawns = SessionState.PillSpawns + 1
+
+    local spawnTable = { origin = infected.GetOrigin(), angles = infected.GetAngles().ToKVString() }
+
+    if(SessionState.PillSpawns >= 1) {
+        SpawnEntityFromTable("weapon_pain_pills", spawnTable)
+        SessionState.PillSpawns = SessionState.PillSpawns - 1
+    }
+
+    // Msg("------------------------------\n")
+    // Msg("ATTRITION STATE\n")
+    // Msg("------------------------------\n")
+    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
+    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+    // Msg("------------------------------\n")
+}
+
+function OnSpecialDeath(infected)
+{
+    SessionState.PillSpawns = SessionState.PillSpawns + 0.25
+    SessionState.PipeSpawns = SessionState.PipeSpawns + 0.5
+
+    if(RandomInt(0, 2) <= 1) { // spawn nothing
+        // Msg("------------------------------\n")
+        // Msg("ATTRITION STATE\n")
+        // Msg("------------------------------\n")
+        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+        // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
+        // Msg("------------------------------\n")
+        return
+    }
+
+    local spawnTable = { origin = infected.GetOrigin(), angles = infected.GetAngles().ToKVString() }
+
+    if(RandomInt(0, 2) <= 1 && SessionState.PipeSpawns >= 1) {
+        SpawnEntityFromTable("weapon_pipe_bomb", spawnTable)
+        SessionState.PipeSpawns = SessionState.PipeSpawns - 1
+    } else if(SessionState.PillSpawns >= 1) {
+        SpawnEntityFromTable("weapon_pain_pills", spawnTable)
+        SessionState.PillSpawns = SessionState.PillSpawns - 1
+    }
+
+    // Msg("------------------------------\n")
+    // Msg("ATTRITION STATE\n")
+    // Msg("------------------------------\n")
+    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+    // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
+    // Msg("------------------------------\n")
+}
+
 function OnGameEvent_player_death(params)
 {
     local victim = null
@@ -99,45 +184,42 @@ function OnGameEvent_player_death(params)
 
     if (victim.GetClassname() != "infected")
     {
-        if (victim.GetZombieType() != 9 && attacker != null && attacker.IsPlayer())
+        if (victim.GetClassname() == "witch" || victim.GetZombieType() != 9 && attacker != null && attacker.IsPlayer())
         {
             if (attacker != null && attacker.IsPlayer() && attacker.GetZombieType() == 9)
             {
-                switch (victim.GetZombieType()) {
-                    case 7: // witch
-                        SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5;
-                        SessionState.PillSpawns = SessionState.PillSpawns + 1;
-                        break;
-                    case 8: // tank
-                        SessionState.MolotovsSpawns = SessionState.MolotovsSpawns + 0.5;
-                        SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5;
-                        SessionState.PillSpawns = SessionState.PillSpawns + 1;
-                        break;
-                    default: // si
-                        SessionState.PillSpawns = SessionState.PillSpawns + 0.25;
-                        SessionState.PipeSpawns = SessionState.PillSpawns + 0.5;
-                        break;
+                if(victim.GetClassname() == "witch")
+                    OnWitchDeath(victim)
+                else {
+                    switch (victim.GetZombieType()) {
+                        case 8: // tank
+                            OnTankDeath(victim)
+                            break;
+                        default: // si
+                            OnSpecialDeath(victim)
+                            break;
+                    }
                 }
             }
         }
     }
 }
 
-function OnGameEvent_witch_spawn(params)
-{
-    local witch = EntIndexToHScript(params.witchid)
-    local health = 0
+// function OnGameEvent_witch_spawn(params)
+// {
+//     local witch = EntIndexToHScript(params.witchid)
+//     local health = 0
 
-    switch (Convars.GetStr("z_difficulty").tolower())
-    {
-        case "easy": health = 1000; break;
-        case "normal": health = 1500; break;
-        case "hard": health = 2000; break;
-        case "impossible": health = 2500; break;
-    }
-    witch.SetMaxHealth(health)
-    witch.SetHealth(health)
-}
+//     switch (Convars.GetStr("z_difficulty").tolower())
+//     {
+//         case "easy": health = 1000; break;
+//         case "normal": health = 1500; break;
+//         case "hard": health = 2000; break;
+//         case "impossible": health = 2500; break;
+//     }
+//     witch.SetMaxHealth(health)
+//     witch.SetHealth(health)
+// }
 
 function OnGameEvent_tank_spawn(params)
 {
@@ -190,6 +272,77 @@ function OnGameEvent_triggered_car_alarm( params )
     ZSpawn({ type = 8 })
 }
 
+function OnGameEvent_round_start_post_nav(params) {
+    SessionState.MolotovsSpawns = SessionState.MolotovsSpawns
+    SessionState.Tier2Spawns = SessionState.Tier2Spawns
+    SessionState.MedkitSpawns = SessionState.MedkitSpawns
+    SessionState.PillSpawns = SessionState.PillSpawns
+    SessionState.PipeSpawns = SessionState.PipeSpawns
+
+
+    local ent = null
+
+    foreach(classname in ["weapon_molotov", "weapon_molotov_spawn"])
+        while (ent = Entities.FindByClassname(ent, classname))
+        {
+            if (SessionState.MolotovsSpawns < 1) {
+                ent.Kill()
+                continue
+            }
+
+            // Msg("[ATTRITION] MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
+            SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1;
+        }
+
+    foreach(classname in ["weapon_pipe_bomb", "weapon_pipe_bomb_spawn"])
+        while (ent = Entities.FindByClassname(ent, classname))
+        {
+            if (SessionState.PipeSpawns < 1) {
+                ent.Kill()
+                continue
+            }
+
+            // Msg("[ATTRITION] PipeSpawns: " + SessionState.PipeSpawns + "\n")
+            SessionState.PipeSpawns = SessionState.PipeSpawns - 1;
+        }
+
+    foreach(classname in ["weapon_pain_pills", "weapon_pain_pills_spawn"])
+        while (ent = Entities.FindByClassname(ent, classname))
+            {
+                if (SessionState.PillSpawns < 1) {
+                    ent.Kill()
+                    continue
+                }
+
+                // Msg("[ATTRITION] PillSpawns: " + SessionState.PillSpawns + "\n")
+                SessionState.PillSpawns = SessionState.PillSpawns - 1;
+            }
+
+    foreach(classname in ["weapon_rifle", "weapon_hunting_rifle", "weapon_autoshotgun"])
+        while (ent = Entities.FindByClassname(ent, classname))
+        {
+            if (SessionState.Tier2Spawns < 1) {
+                ent.Kill()
+                continue
+            }
+
+            // Msg("[ATTRITION] Tier2Spawns: " + SessionState.Tier2Spawns + "\n")
+            SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1
+        }
+
+    foreach(classname in ["weapon_first_aid_kit", "weapon_first_aid_kit_spawn"])
+        while (ent = Entities.FindByClassname(ent, classname))
+        {
+            if (SessionState.MedkitSpawns < 1) {
+                ent.Kill()
+                continue
+            }
+
+            // Msg("[ATTRITION] MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
+            SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1
+        }
+}
+
 DirectorOptions <-
 {
     ActiveChallenge = 1
@@ -209,16 +362,6 @@ DirectorOptions <-
     WitchLimit = 5
     WanderingZombieDensityModifier = 0.1
     CommonLimit = 50
-
-    tier2weapons =
-    {
-        weapon_rifle = 1
-        weapon_hunting_rifle = 1
-        weapon_autoshotgun = 1
-        weapon_rifle_spawn = 1
-        weapon_hunting_rifle_spawn = 1
-        weapon_autoshotgun_spawn = 1
-    }
 
     // convert items that aren't useful
     weaponsToConvert =
@@ -271,46 +414,6 @@ DirectorOptions <-
     {
         if (classname in weaponsToRemove)
             return false;
-
-        if (classname.find("weapon_molotov") != null)
-        {
-            if (SessionState.MolotovsSpawns < 1)
-                return false;
-
-            SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1;
-        }
-
-        if (classname.find("weapon_pipe_bomb") != null)
-        {
-            if (SessionState.PipeSpawns < 1)
-                return false;
-
-            SessionState.PipeSpawns = SessionState.PipeSpawns - 1;
-        }
-
-        if (classname.find("weapon_pain_pills") != null)
-        {
-            if (SessionState.PillSpawns < 1)
-                return false;
-
-            SessionState.PillSpawns = SessionState.PillSpawns - 1;
-        }
-
-        if (classname in tier2weapons)
-        {
-            if (SessionState.Tier2Spawns < 1)
-                return false;
-
-            SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1;
-        }
-
-        if (classname.find("weapon_first_aid_kit") != null)
-        {
-            if (SessionState.MedkitSpawns < 1)
-                return false;
-
-            SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1;
-        }
 
         return true;
     }
