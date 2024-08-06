@@ -7,6 +7,128 @@ if ( !IsModelPrecached( "models/infected/hulk_dlc3.mdl" ) )
 if ( !IsModelPrecached( "models/infected/witch_bride.mdl" ) )
     PrecacheModel( "models/infected/witch_bride.mdl" );
 
+function OnGameEvent_player_first_spawn(params)
+{
+    local player = GetPlayerFromUserID(params["userid"])
+
+    if (player == null || !player.IsPlayer() || player.GetZombieType() == 9)
+        return
+
+    switch(player.GetZombieType())
+    {
+        case 8: SpawnTankItems(player); break;
+        case 7: break; // witch (not really called by this event but w/e)
+        case 11: break; // bride witch (not really called by this event but w/e)
+        default: SpawnSpecialItems(player);
+    }
+}
+
+function SpawnTankItems(infected)
+{
+    if(SessionState.PillSpawns >= 1) {
+        SpawnOnPointOrInfected("weapon_pain_pills", infected)
+        SessionState.PillSpawns = SessionState.PillSpawns - 1
+    }
+
+    if(RandomInt(1, 10) > 9) { // spawn nothing
+        // Msg("------------------------------\n")
+        // Msg("ATTRITION STATE\n")
+        // Msg("------------------------------\n")
+        // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
+        // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
+        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+        // Msg("------------------------------\n")
+        return
+    }
+
+
+    if(RandomInt(0, 3) <= 1 && SessionState.MolotovsSpawns >= 1) {
+        SpawnOnPointOrInfected("weapon_molotov", infected)
+        SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1
+    } else if(SessionState.MedkitSpawns >= 1) {
+        SpawnOnPointOrInfected("weapon_first_aid_kit", infected)
+        SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1
+    }
+
+    // Msg("------------------------------\n")
+    // Msg("ATTRITION STATE\n")
+    // Msg("------------------------------\n")
+    // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
+    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
+    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+    // Msg("------------------------------\n")
+}
+
+function SpawnWitchItems(infected)
+{
+    if(SessionState.PillSpawns >= 1) {
+        SpawnOnPointOrInfected("weapon_pain_pills", infected)
+        SessionState.PillSpawns = SessionState.PillSpawns - 1
+    }
+
+    // Msg("------------------------------\n")
+    // Msg("ATTRITION STATE\n")
+    // Msg("------------------------------\n")
+    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
+    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+    // Msg("------------------------------\n")
+}
+
+function SpawnOnPointOrInfected(classname, infected)
+{
+    local container
+    switch(classname)
+    {
+        case "weapon_pain_pills": container = ValidSpawns.pills; break;
+        case "weapon_first_aid_kit": container = ValidSpawns.medkits; break;
+        case "weapon_pipe_bomb": container = ValidSpawns.pipes; break;
+        case "weapon_molotov": container = ValidSpawns.molotovs; break;
+        default:
+            Msg("[ATTRITION] Error cannot spawn " + classname + "\n")
+            return;
+    }
+
+    // Msg("[ATTRITION] Spawning reward: " + classname + "\n")
+
+    if(!SpawnOnPoint(container, classname)) {
+        local spawnTable = {
+            origin = infected.GetOrigin(),
+            angles = infected.GetAngles().ToKVString()
+        }
+
+        SpawnEntityFromTable(classname, spawnTable)
+        // Msg("[ATTRITION] No more free spawnpoints left '" + classname + "' spawned on infected instead.\n")
+    }
+}
+
+function SpawnSpecialItems(infected)
+{
+    if(RandomInt(0, 2) <= 1) { // spawn nothing
+        // Msg("------------------------------\n")
+        // Msg("ATTRITION STATE\n")
+        // Msg("------------------------------\n")
+        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+        // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
+        // Msg("------------------------------\n")
+        return
+    }
+
+    if(RandomInt(0, 2) <= 1 && SessionState.PipeSpawns >= 1) {
+        SpawnOnPointOrInfected("weapon_pipe_bomb", infected)
+        SessionState.PipeSpawns = SessionState.PipeSpawns - 1
+    } else if(SessionState.PillSpawns >= 1) {
+        SpawnOnPointOrInfected("weapon_pain_pills", infected)
+        SessionState.PillSpawns = SessionState.PillSpawns - 1
+    }
+
+    // Msg("------------------------------\n")
+    // Msg("ATTRITION STATE\n")
+    // Msg("------------------------------\n")
+    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
+    // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
+    // Msg("------------------------------\n")
+}
+
 function OnGameEvent_finale_start( params )
 {
     SessionState.IsFinale = true
@@ -83,38 +205,7 @@ function OnTankDeath(infected)
     if(!SessionState.IsFinale && RandomInt(1, 10) <= 5)
         ZSpawn({ type = 11 })
 
-    if(SessionState.PillSpawns >= 1) {
-        SpawnEntityFromTable("weapon_pain_pills", spawnTable)
-        SessionState.PillSpawns = SessionState.PillSpawns - 1
-    }
-
-    if(RandomInt(1, 10) > 9) { // spawn nothing
-        // Msg("------------------------------\n")
-        // Msg("ATTRITION STATE\n")
-        // Msg("------------------------------\n")
-        // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
-        // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
-        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-        // Msg("------------------------------\n")
-        return
-    }
-
-
-    if(RandomInt(0, 3) <= 1 && SessionState.MolotovsSpawns >= 1) {
-        SpawnEntityFromTable("weapon_molotov", spawnTable)
-        SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1
-    } else if(SessionState.MedkitSpawns >= 1) {
-        SpawnEntityFromTable("weapon_first_aid_kit", spawnTable)
-        SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1
-    }
-
-    // Msg("------------------------------\n")
-    // Msg("ATTRITION STATE\n")
-    // Msg("------------------------------\n")
-    // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
-    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
-    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-    // Msg("------------------------------\n")
+    SpawnTankItems(infected) // tank lets you double dip
 }
 
 function OnWitchDeath(infected)
@@ -122,52 +213,13 @@ function OnWitchDeath(infected)
     SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5
     SessionState.PillSpawns = SessionState.PillSpawns + 1
 
-    local spawnTable = { origin = infected.GetOrigin(), angles = infected.GetAngles().ToKVString() }
-
-    if(SessionState.PillSpawns >= 1) {
-        SpawnEntityFromTable("weapon_pain_pills", spawnTable)
-        SessionState.PillSpawns = SessionState.PillSpawns - 1
-    }
-
-    // Msg("------------------------------\n")
-    // Msg("ATTRITION STATE\n")
-    // Msg("------------------------------\n")
-    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
-    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-    // Msg("------------------------------\n")
+    SpawnWitchItems(infected)
 }
 
 function OnSpecialDeath(infected)
 {
     SessionState.PillSpawns = SessionState.PillSpawns + 0.25
     SessionState.PipeSpawns = SessionState.PipeSpawns + 0.5
-
-    if(RandomInt(0, 2) <= 1) { // spawn nothing
-        // Msg("------------------------------\n")
-        // Msg("ATTRITION STATE\n")
-        // Msg("------------------------------\n")
-        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-        // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
-        // Msg("------------------------------\n")
-        return
-    }
-
-    local spawnTable = { origin = infected.GetOrigin(), angles = infected.GetAngles().ToKVString() }
-
-    if(RandomInt(0, 2) <= 1 && SessionState.PipeSpawns >= 1) {
-        SpawnEntityFromTable("weapon_pipe_bomb", spawnTable)
-        SessionState.PipeSpawns = SessionState.PipeSpawns - 1
-    } else if(SessionState.PillSpawns >= 1) {
-        SpawnEntityFromTable("weapon_pain_pills", spawnTable)
-        SessionState.PillSpawns = SessionState.PillSpawns - 1
-    }
-
-    // Msg("------------------------------\n")
-    // Msg("ATTRITION STATE\n")
-    // Msg("------------------------------\n")
-    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-    // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
-    // Msg("------------------------------\n")
 }
 
 function OnGameEvent_player_death(params)
@@ -186,7 +238,7 @@ function OnGameEvent_player_death(params)
     {
         if (victim.GetClassname() == "witch" || victim.GetZombieType() != 9 && attacker != null && attacker.IsPlayer())
         {
-            if (attacker != null && attacker.IsPlayer() && attacker.GetZombieType() == 9)
+            if (attacker != null && attacker.GetZombieType() == 9)
             {
                 if(victim.GetClassname() == "witch")
                     OnWitchDeath(victim)
@@ -195,6 +247,8 @@ function OnGameEvent_player_death(params)
                         case 8: // tank
                             OnTankDeath(victim)
                             break;
+                        case 7: break
+                        case 11: break
                         default: // si
                             OnSpecialDeath(victim)
                             break;
@@ -272,6 +326,53 @@ function OnGameEvent_triggered_car_alarm( params )
     ZSpawn({ type = 8 })
 }
 
+ValidSpawns <-
+{
+    molotovs = [],
+    pipes = [],
+    pills = [],
+    medkits = []
+}
+
+function AddSpawn(container, ent)
+{
+    local flow = GetFlowDistanceForPosition(ent.GetOrigin())
+    local spawnpoint = {
+        flow = flow,
+        used = false,
+        spawnTable = {
+            origin = ent.GetOrigin(),
+            angles = ent.GetAngles().ToKVString()
+        }
+    }
+
+    container.append(spawnpoint)
+}
+
+function SpawnOnPoint(container, classname)
+{
+    local validFlows = []
+    local minFlow = Director.GetFurthestSurvivorFlow()
+
+    foreach(sp in container)
+    {
+        if(sp.used || sp.flow < minFlow) continue
+
+        validFlows.append(sp)
+    }
+
+    local validSpawnsLen = validFlows.len()
+
+    if(validSpawnsLen == 0) return false
+
+    local spawnpoint = validFlows[RandomInt(0, validSpawnsLen - 1)]
+
+    SpawnEntityFromTable(classname, spawnpoint.spawnTable)
+    spawnpoint.used = true
+
+    return true
+}
+
 function OnGameEvent_round_start_post_nav(params) {
     SessionState.MolotovsSpawns = SessionState.MolotovsSpawns
     SessionState.Tier2Spawns = SessionState.Tier2Spawns
@@ -286,6 +387,7 @@ function OnGameEvent_round_start_post_nav(params) {
         while (ent = Entities.FindByClassname(ent, classname))
         {
             if (SessionState.MolotovsSpawns < 1) {
+                AddSpawn(ValidSpawns.molotovs, ent)
                 ent.Kill()
                 continue
             }
@@ -298,6 +400,7 @@ function OnGameEvent_round_start_post_nav(params) {
         while (ent = Entities.FindByClassname(ent, classname))
         {
             if (SessionState.PipeSpawns < 1) {
+                AddSpawn(ValidSpawns.pipes, ent)
                 ent.Kill()
                 continue
             }
@@ -310,6 +413,7 @@ function OnGameEvent_round_start_post_nav(params) {
         while (ent = Entities.FindByClassname(ent, classname))
             {
                 if (SessionState.PillSpawns < 1) {
+                    AddSpawn(ValidSpawns.pills, ent)
                     ent.Kill()
                     continue
                 }
@@ -334,6 +438,7 @@ function OnGameEvent_round_start_post_nav(params) {
         while (ent = Entities.FindByClassname(ent, classname))
         {
             if (SessionState.MedkitSpawns < 1) {
+                AddSpawn(ValidSpawns.medkits, ent)
                 ent.Kill()
                 continue
             }

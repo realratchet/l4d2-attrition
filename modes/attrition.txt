@@ -1,6 +1,6 @@
 "attrition"
 { 
-    "DisplayTitle"    "Attrition (dev)"
+    "DisplayTitle"    "Attrition"
     "Description"    "In Attrition, survivors face a scarcity of critical resources, including Molotovs, medkits, and pills, requiring careful management and strategy. Each special infected encounter may slightly increase item availability, but overall, survivors must reach the safehouse with limited supplies and heightened challenges."
     "Image"        "maps/any"
     "Author"    "Ratchet"
@@ -27,7 +27,7 @@
         
         "sv_infected_ceda_vomitjar_probability"    0
         "sv_infected_riot_control_tonfa_probability" 0
-        "sv_force_time_of_day"    0
+
         "director_adrenaline_density" 1
         "director_defibrillator_density" 1
         "director_force_tank" 1
