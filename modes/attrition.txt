@@ -30,7 +30,6 @@
 
         "director_adrenaline_density" 1
         "director_defibrillator_density" 1
-        "director_force_tank" 1
         
 
         "z_hunter_limit" 4

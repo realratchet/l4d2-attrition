@@ -331,7 +331,8 @@ ValidSpawns <-
     molotovs = [],
     pipes = [],
     pills = [],
-    medkits = []
+    medkits = [],
+    tanks = []
 }
 
 function AddSpawn(container, ent)
@@ -373,6 +374,66 @@ function SpawnOnPoint(container, classname)
     return true
 }
 
+MobSpawns <-
+{
+    tanks = []
+}
+
+function FillTankSpawns()
+{
+    local tankSpawns = 2
+
+    if(RandomInt(1, 3) > 3)
+        tankSpawns = 3  # chance for three tanks
+
+    for (local i = 0; i < tankSpawns; i = i + 1)
+        MobSpawns.tanks.append({ flow = 25 * (i + 1) + RandomInt(-10, 10), used = false })
+}
+
+function TickTankSupport()
+{
+    if(Director.IsTankInPlay())
+    {
+        DirectorOptions.CommonLimit = 20
+        DirectorOptions.MobMinSize = 10
+        DirectorOptions.MobMaxSize = 20
+        // Msg("[ATTRITION] Reducing number of commons\n")
+    }
+    else
+    {
+        DirectorOptions.CommonLimit = 50
+        DirectorOptions.MobMinSize = 25
+        DirectorOptions.MobMaxSize = 50
+        // Msg("[ATTRITION] Restoring number of commons\n")
+    }
+}
+
+function TickTankFlow()
+{
+    if(SessionState.IsFinale) // no extra tanks during finale
+        return
+
+    local flow = (Director.GetFurthestSurvivorFlow() / GetMaxFlowDistance()) * 100
+
+    // Msg("[ATTRITION] Current flow " + flow + "\n")
+    foreach(sp in MobSpawns.tanks)
+    {
+        // Msg("[ATTRITION] Tank spawn @ " + sp.flow + " | used: " + sp.used + "\n")
+        if(sp.used || sp.flow > flow) continue
+
+        ZSpawn({ type = 8 })
+        sp.used = true
+    }
+}
+
+function Update()
+{
+    TickTankSupport()
+    TickTankFlow()
+
+
+}
+
 function OnGameEvent_round_start_post_nav(params) {
     SessionState.MolotovsSpawns = SessionState.MolotovsSpawns
     SessionState.Tier2Spawns = SessionState.Tier2Spawns
@@ -380,8 +441,9 @@ function OnGameEvent_round_start_post_nav(params) {
     SessionState.PillSpawns = SessionState.PillSpawns
     SessionState.PipeSpawns = SessionState.PipeSpawns
 
-
     local ent = null
+
+    FillTankSpawns()
 
     foreach(classname in ["weapon_molotov", "weapon_molotov_spawn"])
         while (ent = Entities.FindByClassname(ent, classname))
@@ -422,7 +484,7 @@ function OnGameEvent_round_start_post_nav(params) {
                 SessionState.PillSpawns = SessionState.PillSpawns - 1;
             }
 
-    foreach(classname in ["weapon_rifle", "weapon_hunting_rifle", "weapon_autoshotgun"])
+    foreach(classname in DirectorOptions.weaponsTier2)
         while (ent = Entities.FindByClassname(ent, classname))
         {
             if (SessionState.Tier2Spawns < 1) {
@@ -433,6 +495,20 @@ function OnGameEvent_round_start_post_nav(params) {
             // Msg("[ATTRITION] Tier2Spawns: " + SessionState.Tier2Spawns + "\n")
             SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1
         }
+
+    while (ent = Entities.FindByClassname(ent, "weapon_spawn"))
+    {
+       if (!DirectorOptions.weaponsTier2.find(NetProps.GetPropString( ent, "m_iszWeaponToSpawn" )))
+            continue;
+
+        if (SessionState.Tier2Spawns < 1) {
+            ent.Kill()
+            continue
+        }
+
+        // Msg("[ATTRITION] Tier2Spawns: " + SessionState.Tier2Spawns + "\n")
+        SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1
+    }
 
     foreach(classname in ["weapon_first_aid_kit", "weapon_first_aid_kit_spawn"])
         while (ent = Entities.FindByClassname(ent, classname))
@@ -452,10 +528,12 @@ DirectorOptions <-
 {
     ActiveChallenge = 1
 
-    cm_SpecialRespawnInterval = 10
+    SpecialRespawnInterval = 10
     SpecialInitialSpawnDelayMin = 10
     SpecialInitialSpawnDelayMax = 15
     ShouldAllowSpecialsWithTank = true
+
+    DisallowThreatType = ZOMBIE_TANK
 
     HunterLimit = 4
     SmokerLimit = 3
@@ -467,6 +545,22 @@ DirectorOptions <-
     WitchLimit = 5
     WanderingZombieDensityModifier = 0.1
     CommonLimit = 50
+    MobMinSize = 25
+    MobMaxSize = 50
+
+    weaponsTier2 = [
+        "weapon_rifle",
+        "weapon_hunting_rifle",
+        "weapon_autoshotgun",
+        "weapon_sniper_military",
+        "weapon_shotgun_spas",
+        "weapon_rifle_ak47",
+        "weapon_rifle_desert",
+        "tier2_any",
+        "tier2_shotgun",
+        "any_rifle",
+        "any_sniper_rifle"
+    ]
 
     // convert items that aren't useful
     weaponsToConvert =
@@ -477,12 +571,12 @@ DirectorOptions <-
         weapon_upgradepack_incendiary = "weapon_pain_pills"
         weapon_upgradepack_explosive = "weapon_pain_pills"
         weapon_adrenaline = "weapon_pain_pills"
-        weapon_rifle_ak47 = "weapon_rifle"
-        weapon_smg_silenced = "weapon_smg"
-        weapon_shotgun_chrome = "weapon_pumpshotgun"
-        weapon_rifle_desert = "weapon_rifle"
-        weapon_sniper_military = "weapon_hunting_rifle"
-        weapon_shotgun_spas = "weapon_autoshotgun"
+        // weapon_rifle_ak47 = "weapon_rifle"
+        // weapon_smg_silenced = "weapon_smg"
+        // weapon_shotgun_chrome = "weapon_pumpshotgun"
+        // weapon_rifle_desert = "weapon_rifle"
+        // weapon_sniper_military = "weapon_hunting_rifle"
+        // weapon_shotgun_spas = "weapon_autoshotgun"
     }
 
     function ConvertWeaponSpawn(classname)
@@ -504,15 +598,15 @@ DirectorOptions <-
         weapon_melee = 0
         weapon_chainsaw = 0
         weapon_pistol_magnum = 0
-        weapon_smg_silenced = 0
-        weapon_shotgun_chrome = 0
+        // weapon_smg_silenced = 0
+        // weapon_shotgun_chrome = 0
         weapon_vomitjar = 0
-        weapon_rifle_ak47 = 0
-        weapon_shotgun_spas = 0
-        weapon_sniper_military = 0
-        weapon_rifle_desert = 0
-        weapon_upgradepack_explosive = 0
-        weapon_upgradepack_incendiary = 0
+        // weapon_rifle_ak47 = 0
+        // weapon_shotgun_spas = 0
+        // weapon_sniper_military = 0
+        // weapon_rifle_desert = 0
+        // weapon_upgradepack_explosive = 0
+        // weapon_upgradepack_incendiary = 0
     }
 
     function AllowWeaponSpawn(classname)
