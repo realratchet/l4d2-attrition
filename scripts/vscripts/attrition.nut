@@ -386,6 +386,9 @@ function FillTankSpawns()
     if(RandomInt(1, 3) > 3)
         tankSpawns = 3  # chance for three tanks
 
+    if(Director.IsFirstMapInScenario())
+        tankSpawns = tankSpawns - 1 # less tanks in first map
+
     for (local i = 0; i < tankSpawns; i = i + 1)
         MobSpawns.tanks.append({ flow = 25 * (i + 1) + RandomInt(-10, 10), used = false })
 }
