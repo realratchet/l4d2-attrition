@@ -605,10 +605,8 @@ DirectorOptions <-
 
     function ConvertWeaponSpawn(classname)
     {
-        if (classname in weaponsToConvert) {
-            Msg("[ATTRITION] Replaced spawn of " + classname + " with " + weaponsToConvert[classname] + "\n")
+        if (classname in weaponsToConvert)
             return weaponsToConvert[classname];
-        }
 
         return 0;
     }
