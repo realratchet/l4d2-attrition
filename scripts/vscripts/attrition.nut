@@ -34,7 +34,7 @@ function SpawnTankItems(infected)
         // Msg("------------------------------\n")
         // Msg("ATTRITION STATE\n")
         // Msg("------------------------------\n")
-        // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
+        // Msg("MolotovSpawns: " + SessionState.MolotovSpawns + "\n")
         // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
         // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
         // Msg("------------------------------\n")
@@ -42,9 +42,9 @@ function SpawnTankItems(infected)
     }
 
 
-    if(RandomInt(0, 3) <= 1 && SessionState.MolotovsSpawns >= 1) {
+    if(RandomInt(0, 3) <= 1 && SessionState.MolotovSpawns >= 1) {
         SpawnOnPointOrInfected("weapon_molotov", infected)
-        SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1
+        SessionState.MolotovSpawns = SessionState.MolotovSpawns - 1
     } else if(SessionState.MedkitSpawns >= 1) {
         SpawnOnPointOrInfected("weapon_first_aid_kit", infected)
         SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1
@@ -53,7 +53,7 @@ function SpawnTankItems(infected)
     // Msg("------------------------------\n")
     // Msg("ATTRITION STATE\n")
     // Msg("------------------------------\n")
-    // Msg("MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
+    // Msg("MolotovSpawns: " + SessionState.MolotovSpawns + "\n")
     // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
     // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
     // Msg("------------------------------\n")
@@ -79,10 +79,10 @@ function SpawnOnPointOrInfected(classname, infected)
     local container
     switch(classname)
     {
-        case "weapon_pain_pills": container = ValidSpawns.pills; break;
-        case "weapon_first_aid_kit": container = ValidSpawns.medkits; break;
-        case "weapon_pipe_bomb": container = ValidSpawns.pipes; break;
-        case "weapon_molotov": container = ValidSpawns.molotovs; break;
+        case "weapon_pain_pills": container = ValidSpawns.PillSpawns; break;
+        case "weapon_first_aid_kit": container = ValidSpawns.MedkitSpawns; break;
+        case "weapon_pipe_bomb": container = ValidSpawns.PipeSpawns; break;
+        case "weapon_molotov": container = ValidSpawns.MolotovSpawns; break;
         default:
             Msg("[ATTRITION] Error cannot spawn " + classname + "\n")
             return;
@@ -93,7 +93,7 @@ function SpawnOnPointOrInfected(classname, infected)
     if(!SpawnOnPoint(container, classname)) {
         local spawnTable = {
             origin = infected.GetOrigin(),
-            angles = infected.GetAngles().ToKVString()
+            // angles = infected.GetAngles().ToKVString()
         }
 
         SpawnEntityFromTable(classname, spawnTable)
@@ -141,7 +141,7 @@ function OnGameEvent_gauntlet_finale_start( params )
 
 MutationState <-
 {
-    MolotovsSpawns = 2
+    MolotovSpawns = 2
     Tier2Spawns = 2
     MedkitSpawns = 2
     PillSpawns = 5
@@ -150,6 +150,21 @@ MutationState <-
     TankSpawnDelay = 0
     NextTankIsSpecial = false
 }
+
+WeaponsTier2 <-
+[
+    "weapon_rifle",
+    "weapon_hunting_rifle",
+    "weapon_autoshotgun",
+    "weapon_sniper_military",
+    "weapon_shotgun_spas",
+    "weapon_rifle_ak47",
+    "weapon_rifle_desert",
+    "tier2_any",
+    "tier2_shotgun",
+    "any_rifle",
+    "any_sniper_rifle"
+]
 
 if (!Director.IsSessionStartMap())
 {
@@ -196,7 +211,7 @@ function OnGameEvent_survivor_rescued(params)
 
 function OnTankDeath(infected)
 {
-    SessionState.MolotovsSpawns = SessionState.MolotovsSpawns + 0.5
+    SessionState.MolotovSpawns = SessionState.MolotovSpawns + 0.5
     SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5
     SessionState.PillSpawns = SessionState.PillSpawns + 1
 
@@ -328,10 +343,10 @@ function OnGameEvent_triggered_car_alarm( params )
 
 ValidSpawns <-
 {
-    molotovs = [],
-    pipes = [],
-    pills = [],
-    medkits = [],
+    MolotovSpawns = [],
+    PipeSpawns = [],
+    PillSpawns = [],
+    MedkitSpawns = [],
     tanks = []
 }
 
@@ -437,71 +452,90 @@ function Update()
 
 }
 
-function OnGameEvent_round_start_post_nav(params) {
-    SessionState.MolotovsSpawns = SessionState.MolotovsSpawns
-    SessionState.Tier2Spawns = SessionState.Tier2Spawns
-    SessionState.MedkitSpawns = SessionState.MedkitSpawns
-    SessionState.PillSpawns = SessionState.PillSpawns
-    SessionState.PipeSpawns = SessionState.PipeSpawns
+function LimitSpawnPoint(classnames, spawnKey)
+{
+    local ent
 
-    local ent = null
-
-    FillTankSpawns()
-
-    foreach(classname in ["weapon_molotov", "weapon_molotov_spawn"])
+    foreach(classname in classnames)
+    {
         while (ent = Entities.FindByClassname(ent, classname))
         {
-            if (SessionState.MolotovsSpawns < 1) {
-                AddSpawn(ValidSpawns.molotovs, ent)
+            if (SessionState[spawnKey] < 1) {
+                AddSpawn(ValidSpawns[spawnKey], ent)
                 ent.Kill()
                 continue
             }
 
-            // Msg("[ATTRITION] MolotovsSpawns: " + SessionState.MolotovsSpawns + "\n")
-            SessionState.MolotovsSpawns = SessionState.MolotovsSpawns - 1;
+            // Msg("[ATTRITION] " + spawnKey + ": " + SessionState[spawnKey] + "\n")
+            SessionState[spawnKey] = SessionState[spawnKey] - 1;
         }
+    }
+}
 
-    foreach(classname in ["weapon_pipe_bomb", "weapon_pipe_bomb_spawn"])
-        while (ent = Entities.FindByClassname(ent, classname))
-        {
-            if (SessionState.PipeSpawns < 1) {
-                AddSpawn(ValidSpawns.pipes, ent)
-                ent.Kill()
-                continue
-            }
+function ReplaceAndLimitSpawnPoint(classnames, newClassname, spawnKey)
+{
+    local ent
 
-            // Msg("[ATTRITION] PipeSpawns: " + SessionState.PipeSpawns + "\n")
-            SessionState.PipeSpawns = SessionState.PipeSpawns - 1;
-        }
-
-    foreach(classname in ["weapon_pain_pills", "weapon_pain_pills_spawn"])
+    foreach(classname in classnames)
+    {
         while (ent = Entities.FindByClassname(ent, classname))
             {
                 if (SessionState.PillSpawns < 1) {
-                    AddSpawn(ValidSpawns.pills, ent)
+                    AddSpawn(ValidSpawns.PillSpawns, ent)
                     ent.Kill()
                     continue
                 }
 
-                // Msg("[ATTRITION] PillSpawns: " + SessionState.PillSpawns + "\n")
+                local spawnTable = {
+                    origin = ent.GetOrigin(),
+                    angles = ent.GetAngles().ToKVString()
+                }
+
+                SpawnEntityFromTable(newClassname, spawnTable)
+                ent.Kill()
+
+                // Msg("[ATTRITION] " + spawnKey + "(" + classname + "): " + SessionState[spawnKey] + "\n")
                 SessionState.PillSpawns = SessionState.PillSpawns - 1;
             }
+    }
+}
 
-    foreach(classname in DirectorOptions.weaponsTier2)
-        while (ent = Entities.FindByClassname(ent, classname))
-        {
-            if (SessionState.Tier2Spawns < 1) {
-                ent.Kill()
-                continue
-            }
-
-            // Msg("[ATTRITION] Tier2Spawns: " + SessionState.Tier2Spawns + "\n")
-            SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1
-        }
+function ModifyWeaponSpawns()
+{
+    local ent
 
     while (ent = Entities.FindByClassname(ent, "weapon_spawn"))
     {
-       if (!DirectorOptions.weaponsTier2.find(NetProps.GetPropString( ent, "m_iszWeaponToSpawn" )))
+        NetProps.SetPropInt(ent, "m_itemCount", 1)
+        NetProps.SetPropInt(ent, "m_spawnflags", NetProps.GetPropInt(ent, "m_spawnflags") & ~(4 | 8)) // remove infinite and absorb flags
+
+        if(NetProps.GetPropString( ent, "m_iszWeaponToSpawn" ) == "any_primary") {
+                if(ent.IsValid()) {
+                    local weapon_selection
+                    if(SessionState.Tier2Spawns < 1 || RandomInt(0, 2) <= 1) weapon_selection = "tier1_any"
+                    else {
+                        weapon_selection = "tier2_any"
+                        SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1
+                    }
+
+                local spawnTable =
+                {
+                    origin = ent.GetOrigin(),
+                    angles = ent.GetAngles().ToKVString(),
+                    targetname = ent.GetName(),
+                    count = 1,
+                    spawnflags = NetProps.GetPropInt( ent, "m_spawnflags" ),
+                    weapon_selection = weapon_selection,
+                    spawn_without_director = 1
+                }
+
+                ent.Kill();
+                SpawnEntityFromTable("weapon_spawn", spawnTable)
+                continue
+            }
+        }
+
+       if (!WeaponsTier2.find(NetProps.GetPropString( ent, "m_iszWeaponToSpawn" )))
             continue;
 
         if (SessionState.Tier2Spawns < 1) {
@@ -509,22 +543,23 @@ function OnGameEvent_round_start_post_nav(params) {
             continue
         }
 
-        // Msg("[ATTRITION] Tier2Spawns: " + SessionState.Tier2Spawns + "\n")
         SessionState.Tier2Spawns = SessionState.Tier2Spawns - 1
     }
+}
 
-    foreach(classname in ["weapon_first_aid_kit", "weapon_first_aid_kit_spawn"])
-        while (ent = Entities.FindByClassname(ent, classname))
-        {
-            if (SessionState.MedkitSpawns < 1) {
-                AddSpawn(ValidSpawns.medkits, ent)
-                ent.Kill()
-                continue
-            }
+function OnGameEvent_round_start_post_nav(params) {
+    FillTankSpawns()
 
-            // Msg("[ATTRITION] MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
-            SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1
-        }
+    LimitSpawnPoint(["weapon_molotov", "weapon_molotov_spawn"], "MolotovSpawns")
+    LimitSpawnPoint(["weapon_pipe_bomb", "weapon_pipe_bomb_spawn", "weapon_vomitjar", "weapon_vomitjar_spawn"], "PipeSpawns")
+    LimitSpawnPoint(["weapon_first_aid_kit", "weapon_first_aid_kit_spawn"], "MedkitSpawns")
+    LimitSpawnPoint(["weapon_pain_pills", "weapon_pain_pills_spawn"], "PillSpawns")
+
+    ReplaceAndLimitSpawnPoint(["weapon_adrenaline", "weapon_adrenaline_spawn"], "weapon_pain_pills", "PillSpawns")
+    ReplaceAndLimitSpawnPoint(["weapon_defibrillator", "weapon_defibrillator_spawn"], "weapon_first_aid_kit", "MedkitSpawns")
+
+    ModifyWeaponSpawns()
+    LimitSpawnPoint(WeaponsTier2, "Tier2Spawns")
 }
 
 DirectorOptions <-
@@ -551,29 +586,15 @@ DirectorOptions <-
     MobMinSize = 25
     MobMaxSize = 50
 
-    weaponsTier2 = [
-        "weapon_rifle",
-        "weapon_hunting_rifle",
-        "weapon_autoshotgun",
-        "weapon_sniper_military",
-        "weapon_shotgun_spas",
-        "weapon_rifle_ak47",
-        "weapon_rifle_desert",
-        "tier2_any",
-        "tier2_shotgun",
-        "any_rifle",
-        "any_sniper_rifle"
-    ]
-
     // convert items that aren't useful
     weaponsToConvert =
     {
-        weapon_vomitjar = "weapon_pipe_bomb"
-        weapon_defibrillator = "weapon_first_aid_kit"
+        // weapon_vomitjar = "weapon_pipe_bomb"
+        // weapon_defibrillator = "weapon_first_aid_kit"
         weapon_pistol_magnum = "weapon_pistol"
         weapon_upgradepack_incendiary = "weapon_pain_pills"
         weapon_upgradepack_explosive = "weapon_pain_pills"
-        weapon_adrenaline = "weapon_pain_pills"
+        // weapon_adrenaline = "weapon_pain_pills"
         // weapon_rifle_ak47 = "weapon_rifle"
         // weapon_smg_silenced = "weapon_smg"
         // weapon_shotgun_chrome = "weapon_pumpshotgun"
@@ -584,8 +605,10 @@ DirectorOptions <-
 
     function ConvertWeaponSpawn(classname)
     {
-        if (classname in weaponsToConvert)
+        if (classname in weaponsToConvert) {
+            Msg("[ATTRITION] Replaced spawn of " + classname + " with " + weaponsToConvert[classname] + "\n")
             return weaponsToConvert[classname];
+        }
 
         return 0;
     }
