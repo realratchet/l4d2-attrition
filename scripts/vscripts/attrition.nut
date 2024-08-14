@@ -189,6 +189,16 @@ if (!Director.IsSessionStartMap())
     }
 }
 
+function OnGameEvent_map_transition(params)
+{
+    SaveTable("consumables", {
+        MolotovSpawns = SessionState.MolotovSpawns,
+        MedkitSpawns = SessionState.MedkitSpawns,
+        PillSpawns = SessionState.PillSpawns,
+        PipeSpawns = SessionState.PipeSpawns,
+    })
+}
+
 function OnGameEvent_defibrillator_used(params)
 {
     local player = GetPlayerFromUserID(params["subject"]);
@@ -473,6 +483,37 @@ function CollectSpawns(classnames, spawnKey)
     return ValidSpawns[spawnKey]
 }
 
+
+function LimitMedkitSpawnPoint()
+{
+    local classnames = ["weapon_first_aid_kit", "weapon_first_aid_kit_spawn", "weapon_defibrillator", "weapon_defibrillator_spawn"]
+    local spawnKey = "MedkitSpawns"
+
+    local maxFlowDist = GetMaxFlowDistance()
+    local minFlow = Director.IsFirstMapInScenario() ? 0 : (Director.GetFurthestSurvivorFlow() / maxFlowDist) * 100 + 5 // first map can spawn medkits at saferoom, other maps can't
+    local spawns = CollectSpawns(classnames, spawnKey).filter(function(i, spawn) { return (spawn.flow / maxFlowDist) * 100 >= minFlow })
+    local count = SessionState[spawnKey] <= spawns.len() ? SessionState[spawnKey] : spawns.len()
+
+    SessionState[spawnKey] = SessionState[spawnKey] - count
+
+    for(local i = 0; i < count; i++) {
+        local spawned = false
+
+        do {
+            local spawn = spawns[RandomInt(0, spawns.len() - 1)]
+            local flow = spawn.flow / maxFlowDist
+
+            if(spawn.used)
+                continue
+
+            SpawnEntityFromTable("weapon_first_aid_kit", spawn.spawnTable)
+
+            spawn.used = true
+            spawned = true
+        } while(!spawned)
+    }
+}
+
 function LimitSpawnPoint(classnames, spawnKey)
 {
     local classname
@@ -568,12 +609,48 @@ function ModifyWeaponSpawns()
     }
 }
 
+SavedState <- {
+    MolotovSpawns = 0,
+    MedkitSpawns = 0,
+    PillSpawns = 0,
+    PipeSpawns = 0,
+}
+
+function Max(a, b) { return a > b ? a : b; }
+function Min(a, b) { return a < b ? a : b; }
+
+function GetExtraConsumableLimits(savedKey)
+{
+    local count = 0
+
+    switch(savedKey)
+    {
+        case "MolotovSpawns": count = Min(SavedState[savedKey], 0.5); break;
+        case "MedkitSpawns": count = Min(SavedState[savedKey], 1); break;
+        case "PillSpawns": count = Min(SavedState[savedKey], 1.5); break;
+        case "PipeSpawns": count = Min(SavedState[savedKey], 2); break;
+    }
+
+    return count
+}
+
+function RestoreConsumables()
+{
+    RestoreTable("consumables", SavedState)
+    foreach(sp in ["MolotovSpawns", "MedkitSpawns", "PillSpawns", "PipeSpawns"]) {
+        local extra = GetExtraConsumableLimits(sp)
+        // Msg("[ATTRITION] Starting map with " + sp + " " + SessionState[sp] + " + " + extra + "\n")
+        SessionState[sp] = SessionState[sp] + extra
+    }
+}
+
 function OnGameEvent_round_start_post_nav(params) {
+    RestoreConsumables()
     FillTankSpawns()
 
     LimitSpawnPoint(["weapon_molotov", "weapon_molotov_spawn"], "MolotovSpawns")
     LimitSpawnPoint(["weapon_pipe_bomb", "weapon_pipe_bomb_spawn", "weapon_vomitjar", "weapon_vomitjar_spawn"], "PipeSpawns")
-    LimitSpawnPoint(["weapon_first_aid_kit", "weapon_first_aid_kit_spawn", "weapon_defibrillator", "weapon_defibrillator_spawn"], "MedkitSpawns")
+    LimitMedkitSpawnPoint()
     LimitSpawnPoint(["weapon_pain_pills", "weapon_pain_pills_spawn", "weapon_adrenaline", "weapon_adrenaline_spawn"], "PillSpawns")
 
     ModifyWeaponSpawns()

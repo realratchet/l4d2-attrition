@@ -31,6 +31,9 @@
         "director_adrenaline_density" 1
         "director_defibrillator_density" 1
         
+        "tank_burn_duration" 100
+        "tank_burn_duration_hard" 130
+        "tank_burn_duration_expert" 160
 
         "z_hunter_limit" 4
         "z_smoker_limit" 3
