@@ -149,6 +149,7 @@ MutationState <-
     IsFinale = false
     TankSpawnDelay = 0
     NextTankIsSpecial = false
+    FlowTank = { isSpawned = false, inPlay = false, playedMegaMobSound = false, flowMin = 0, flowMax = 0 }
 }
 
 WeaponsTier2 <-
@@ -229,6 +230,11 @@ function OnTankDeath(infected)
 
     if(!SessionState.IsFinale && RandomInt(1, 10) <= 5)
         ZSpawn({ type = 11 })
+
+    if(!Director.IsTankInPlay() && SessionState.FlowTank.inPlay || SessionState.FlowTank.isSpawned) {
+        SessionState.FlowTank.isSpawned = false
+        SessionState.FlowTank.inPlay = false
+    }
 
     SpawnTankItems(infected) // tank lets you double dip
 }
@@ -421,13 +427,59 @@ function FillTankSpawns()
         MobSpawns.tanks.append({ flow = spBase * (i + 1) + RandomInt(-spRange, spRange), used = false })
 }
 
+function ExponentialInterpolate(a, b, x, min_x, max_x) {
+    // Clamp x to be within the range [min_x, max_x]
+    if (x < min_x) x = min_x;
+    if (x > max_x) x = max_x;
+
+    // Normalize x to a value between 0 and 1
+    local t = (x - min_x) / (max_x - min_x);
+
+    // Apply an exponential easing to t
+    local factor = 2; // This controls the steepness of the ramp (2 is a common choice)
+    local eased_t = pow(t, factor);
+
+    // Interpolate between a and b based on eased_t
+    return a + (b - a) * eased_t;
+}
+
 function TickTankSupport()
 {
+    Msg("[ATTRITION] Tank support: " + "isSpawned(" + SessionState.FlowTank.isSpawned + ") " + "inPlay(" + SessionState.FlowTank.inPlay + ") " + "flowMin(" + SessionState.FlowTank.flowMin + ") " + "flowMax(" + SessionState.FlowTank.flowMax + ") " + "\n")
+
     if(Director.IsTankInPlay())
     {
-        DirectorOptions.CommonLimit = 20
-        DirectorOptions.MobMinSize = 10
-        DirectorOptions.MobMaxSize = 20
+        if(!SessionState.FlowTank.isSpawned) {
+            DirectorOptions.CommonLimit = 20
+            DirectorOptions.MobMinSize = 10
+            DirectorOptions.MobMaxSize = 20
+        } else {
+            local maxSurvivor = Director.GetHighestFlowSurvivor()
+
+
+            local flow = (GetFlowDistanceForPosition(maxSurvivor ? maxSurvivor.GetOrigin() : Director.GetFurthestSurvivorFlow()`) / GetMaxFlowDistance()) * 100
+
+            if(!SessionState.FlowTank.inPlay) {
+                SessionState.FlowTank.flowMin = Min(flow + 5, 90) // start ramping up at +5% extra flow
+                SessionState.FlowTank.flowMax = Min(flow + 20, 110)
+                SessionState.FlowTank.inPlay = true
+                SessionState.FlowTank.playedMegaMobSound = false
+            }
+
+            local infected = ExponentialInterpolate(5, 50, flow, SessionState.FlowTank.flowMin, SessionState.FlowTank.flowMax)
+
+            if(infected >= 50 && !SessionState.FlowTank.playedMegaMobSound) {
+                SessionState.FlowTank.playedMegaMobSound = true
+                Director.PlayMegaMobWarningSounds()
+            }
+
+
+            DirectorOptions.CommonLimit = ceil(infected)
+            DirectorOptions.MobMinSize = ceil(infected * 0.5)
+            DirectorOptions.MobMaxSize = ceil(infected)
+
+            // Msg("[ATTRITION] Commons: " + infected + "\n")
+        }
         // Msg("[ATTRITION] Reducing number of commons\n")
     }
     else
@@ -454,6 +506,11 @@ function TickTankFlow()
 
         ZSpawn({ type = 8 })
         sp.used = true
+
+        if(!SessionState.FlowTank.isSpawned) {
+            SessionState.FlowTank.inPlay = Director.IsTankInPlay()
+            SessionState.FlowTank.isSpawned = true
+        }
     }
 }
 
