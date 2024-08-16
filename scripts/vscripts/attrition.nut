@@ -445,7 +445,7 @@ function ExponentialInterpolate(a, b, x, min_x, max_x) {
 
 function TickTankSupport()
 {
-    Msg("[ATTRITION] Tank support: " + "isSpawned(" + SessionState.FlowTank.isSpawned + ") " + "inPlay(" + SessionState.FlowTank.inPlay + ") " + "flowMin(" + SessionState.FlowTank.flowMin + ") " + "flowMax(" + SessionState.FlowTank.flowMax + ") " + "\n")
+    // Msg("[ATTRITION] Tank support: " + "isSpawned(" + SessionState.FlowTank.isSpawned + ") " + "inPlay(" + SessionState.FlowTank.inPlay + ") " + "flowMin(" + SessionState.FlowTank.flowMin + ") " + "flowMax(" + SessionState.FlowTank.flowMax + ") " + "\n")
 
     if(Director.IsTankInPlay())
     {
