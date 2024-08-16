@@ -457,7 +457,7 @@ function TickTankSupport()
             local maxSurvivor = Director.GetHighestFlowSurvivor()
 
 
-            local flow = (GetFlowDistanceForPosition(maxSurvivor ? maxSurvivor.GetOrigin() : Director.GetFurthestSurvivorFlow()`) / GetMaxFlowDistance()) * 100
+            local flow = (GetFlowDistanceForPosition(maxSurvivor ? maxSurvivor.GetOrigin() : Director.GetFurthestSurvivorFlow()) / GetMaxFlowDistance()) * 100
 
             if(!SessionState.FlowTank.inPlay) {
                 SessionState.FlowTank.flowMin = Min(flow + 5, 90) // start ramping up at +5% extra flow
