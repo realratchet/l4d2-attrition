@@ -244,6 +244,13 @@ function OnWitchDeath(infected)
     SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.5
     SessionState.PillSpawns = SessionState.PillSpawns + 1
 
+    if(infected.GetModelName().find("bride") >= 0) // bride witch is more dangerous, give an extra reward
+    {
+        SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.25
+        SessionState.PillSpawns = SessionState.PillSpawns + 0.5
+        SessionState.PipeSpawns = SessionState.PipeSpawns + 0.5
+    }
+
     SpawnWitchItems(infected)
 }
 
@@ -253,7 +260,7 @@ function OnSpecialDeath(infected)
     SessionState.PipeSpawns = SessionState.PipeSpawns + 0.5
 }
 
-function OnGameEvent_player_death(params)
+function OnInfectedKilled(params)
 {
     local victim = null
     local attacker = null
@@ -290,6 +297,64 @@ function OnGameEvent_player_death(params)
     }
 }
 
+function OnPlayerKilled(params)
+{
+    if ( !("userid" in params) )
+        return;
+
+    local victim = GetPlayerFromUserID( params["userid"] );
+
+    if ( ( !victim ) || ( !victim.IsSurvivor() ) )
+        return;
+
+    local prevRagdoll = NetProps.GetPropEntity( victim, "m_hRagdoll" );
+    if ( prevRagdoll != null )
+        return;
+
+    local clOrigin = victim.GetOrigin();
+
+    local ragdoll = null;
+    // cs_ragdoll can crash if proper netprops aren't set, some future-proofing
+    // get rid of uninitialized ragdoll if something goes wrong here
+    try
+    {
+        ragdoll = SpawnEntityFromTable( "cs_ragdoll", {} )
+        NetProps.SetPropVector( ragdoll, "m_vecOrigin", clOrigin );
+        NetProps.SetPropVector( ragdoll, "m_vecRagdollOrigin", clOrigin );
+        NetProps.SetPropInt( ragdoll, "m_nModelIndex", NetProps.GetPropInt( victim, "m_nModelIndex" ) );
+        NetProps.SetPropInt( ragdoll, "m_iTeamNum", NetProps.GetPropInt( victim, "m_iTeamNum" ) );
+        NetProps.SetPropEntity( ragdoll, "m_hPlayer", victim );
+        NetProps.SetPropInt( ragdoll, "m_iDeathPose", NetProps.GetPropInt( victim, "m_nSequence" ) );
+        NetProps.SetPropInt( ragdoll, "m_iDeathFrame", NetProps.GetPropInt( victim, "m_flAnimTime" ) );
+        NetProps.SetPropInt( ragdoll, "m_bClientSideAnimation", 1 );
+        NetProps.SetPropInt( ragdoll, "m_iTeamNum", NetProps.GetPropInt( victim, "m_iTeamNum" ) );
+        NetProps.SetPropInt( ragdoll, "m_nForceBone", NetProps.GetPropInt( victim, "m_nForceBone" ) );
+        NetProps.SetPropInt( ragdoll, "m_ragdollType", 4 );
+        NetProps.SetPropInt( ragdoll, "m_survivorCharacter", NetProps.GetPropInt( victim, "m_survivorCharacter" ) );
+        NetProps.SetPropEntity( victim, "m_hRagdoll", ragdoll );
+
+        //EntFire( "survivor_death_model", "Kill" );
+        // EntFire is too slow and you can see one-frame image of death model
+        for ( local body; body = Entities.FindByClassname( body, "survivor_death_model" ); )
+        {
+            body.Kill();
+        }
+    }
+    catch (err)
+    {
+        if ( ragdoll != null && ragdoll.IsValid() )
+            ragdoll.Kill();
+
+        EntFire( "survivor_death_model", "BecomeRagdoll" );
+    }
+}
+
+function OnGameEvent_player_death(params)
+{
+    OnInfectedKilled(params)
+    OnPlayerKilled(params)
+}
+
 // function OnGameEvent_witch_spawn(params)
 // {
 //     local witch = EntIndexToHScript(params.witchid)
@@ -306,6 +371,110 @@ function OnGameEvent_player_death(params)
 //     witch.SetHealth(health)
 // }
 
+// function CollectWeaponInfo(invTable)
+// {
+//     local wep
+//     local weapons = {
+//         slot0 = null
+//     }
+
+//     if("slot0" in invTable) {
+//         wep = invTable["slot0"]
+
+//         weapons["slot0"] = {
+//             type = wep.GetClassname(),
+//             clip1 = wep.Clip1(),
+//             clip2 = wep.Clip2(),
+//             ammo = NetProps.GetPropInt(wep, "m_iExtraPrimaryAmmo")
+//         }
+//     }
+
+//     return weapons
+// }
+
+// function CollectPlayerInfo(player) {
+//     local invTable = {}
+//     GetInvTable(player, invTable)
+
+//     return {
+//         model = player.GetModelName(),
+//         weapons = CollectWeaponInfo(invTable),
+//         health = {
+//             perm = player.GetHealth(),
+//             temp = player.GetHealthBuffer(),
+//             revives = NetProps.GetPropInt(player, "m_currentReviveCount")
+//         },
+//     }
+// }
+
+// function SaveGameState()
+// {
+//     local player = null
+
+//     // Iterate through every player
+//     while(player = Entities.FindByClassname(player, "player"))
+//     {
+//         DumpObject(CollectPlayerInfo(player))
+//         // printl("Player: " + player.GetPlayerName())
+
+//         // printl("Modelname: " + player.GetModelName())
+
+//         // // Add an empty table to store the inventory in
+//         // local invTable = {}
+
+//         // // Call the function to fill the table
+//         // GetInvTable(player, invTable)
+
+//         // // Check if the player has a primary weapon
+//         // if("slot0" in invTable)
+//         // {
+//         //     printl("Primary weapon equipped: " + invTable.slot0)
+//         // }
+//         // else
+//         // {
+//         //     printl("Primary weapon not equipped!")
+//         // }
+
+//         // // Print all equipped weapons
+//         // foreach(slot, weapon in invTable)
+//         // {
+//         //     printl("\t" + slot + "= " + weapon.GetClassname())
+//         // }
+//     }
+// }
+
+// function RestoreGameState()
+// {
+
+// }
+
+// function OnGameEvent_player_say(params){
+
+//     local text,ent = null
+
+//     if("userid" in params && params.userid == 0){
+//         return
+//     }
+
+//     text = strip(params["text"].tolower())
+//     ent = GetPlayerFromUserID(params["userid"])
+
+//     if(text.len() < 1){
+//         return
+//     }
+
+//     local steamID = ent.GetNetworkIDString()
+
+//     switch(text){
+//         case "!save":
+//             SaveGameState();
+//             break;
+//         case "!restore":
+//             RestoreGameState();
+//             break;
+//     }
+// }
+
 function OnGameEvent_tank_spawn(params)
 {
     local tank = EntIndexToHScript(params.tankid)
@@ -317,6 +486,8 @@ function OnGameEvent_tank_spawn(params)
         case "hard": health = 20000; break;
         case "impossible": health = 30000;  break;
     }
+
+    local maxHealth = health // we want special tank to burn in half the time
 
     if(SessionState.NextTankIsSpecial) {
         SessionState.NextTankIsSpecial = false
@@ -332,12 +503,12 @@ function OnGameEvent_tank_spawn(params)
         tank.SetModel("models/infected/hulk_dlc3.mdl")
     }
 
-    tank.SetMaxHealth(health)
+    tank.SetMaxHealth(maxHealth)
     tank.SetHealth(health)
 
     if(SessionState.IsFinale && Time() > SessionState.TankSpawnDelay) {
         SessionState.NextTankIsSpecial = true
-        SessionState.TankSpawnDelay = Time() + 2 // prevent filling server with tanks
+        SessionState.TankSpawnDelay = Time() + 25 // prevent filling server with tanks, number higher for swamp fever
         ZSpawn({ type = 8 })
     }
 }
@@ -470,7 +641,8 @@ function TickTankSupport()
 
             if(infected >= 50 && !SessionState.FlowTank.playedMegaMobSound) {
                 SessionState.FlowTank.playedMegaMobSound = true
-                Director.PlayMegaMobWarningSounds()
+                // Director.PlayMegaMobWarningSounds()
+                EntFire( "info_director", "ForcePanicEvent" );
             }
 
 
@@ -736,6 +908,8 @@ DirectorOptions <-
     CommonLimit = 50
     MobMinSize = 25
     MobMaxSize = 50
+
+    cm_ShouldHurry = true
 
     // convert items that aren't useful
     weaponsToConvert =
