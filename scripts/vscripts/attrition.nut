@@ -31,16 +31,8 @@ function SpawnTankItems(infected)
     }
 
     if(RandomInt(1, 10) > 9) { // spawn nothing
-        // Msg("------------------------------\n")
-        // Msg("ATTRITION STATE\n")
-        // Msg("------------------------------\n")
-        // Msg("MolotovSpawns: " + SessionState.MolotovSpawns + "\n")
-        // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
-        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-        // Msg("------------------------------\n")
         return
     }
-
 
     if(RandomInt(0, 3) <= 1 && SessionState.MolotovSpawns >= 1) {
         SpawnOnPointOrInfected("weapon_molotov", infected)
@@ -49,29 +41,14 @@ function SpawnTankItems(infected)
         SpawnOnPointOrInfected("weapon_first_aid_kit", infected)
         SessionState.MedkitSpawns = SessionState.MedkitSpawns - 1
     }
-
-    // Msg("------------------------------\n")
-    // Msg("ATTRITION STATE\n")
-    // Msg("------------------------------\n")
-    // Msg("MolotovSpawns: " + SessionState.MolotovSpawns + "\n")
-    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
-    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-    // Msg("------------------------------\n")
 }
 
 function SpawnWitchItems(infected)
 {
-    if(SessionState.PillSpawns >= 1) {
-        SpawnOnPointOrInfected("weapon_pain_pills", infected)
-        SessionState.PillSpawns = SessionState.PillSpawns - 1
-    }
+    if(SessionState.PillSpawns < 1) return;
 
-    // Msg("------------------------------\n")
-    // Msg("ATTRITION STATE\n")
-    // Msg("------------------------------\n")
-    // Msg("MedkitSpawns: " + SessionState.MedkitSpawns + "\n")
-    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-    // Msg("------------------------------\n")
+    SpawnOnPointOrInfected("weapon_pain_pills", infected)
+    SessionState.PillSpawns = SessionState.PillSpawns - 1
 }
 
 function SpawnOnPointOrInfected(classname, infected)
@@ -88,28 +65,20 @@ function SpawnOnPointOrInfected(classname, infected)
             return;
     }
 
-    // Msg("[ATTRITION] Spawning reward: " + classname + "\n")
-
     if(!SpawnOnPoint(container, classname)) {
         local spawnTable = {
             origin = infected.GetOrigin(),
-            // angles = infected.GetAngles().ToKVString()
+            angles = infected.GetAngles().ToKVString()
         }
 
         SpawnEntityFromTable(classname, spawnTable)
-        // Msg("[ATTRITION] No more free spawnpoints left '" + classname + "' spawned on infected instead.\n")
+        DevPrint("\x03 [DEV] Spawning reward " + "\x04" + classname + "\x03" + " at position " + "\x04" + spawnTable.origin + "\x03" + ".")
     }
 }
 
 function SpawnSpecialItems(infected)
 {
     if(RandomInt(0, 2) <= 1) { // spawn nothing
-        // Msg("------------------------------\n")
-        // Msg("ATTRITION STATE\n")
-        // Msg("------------------------------\n")
-        // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-        // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
-        // Msg("------------------------------\n")
         return
     }
 
@@ -120,13 +89,6 @@ function SpawnSpecialItems(infected)
         SpawnOnPointOrInfected("weapon_pain_pills", infected)
         SessionState.PillSpawns = SessionState.PillSpawns - 1
     }
-
-    // Msg("------------------------------\n")
-    // Msg("ATTRITION STATE\n")
-    // Msg("------------------------------\n")
-    // Msg("PillSpawns: " + SessionState.PillSpawns + "\n")
-    // Msg("PipeSpawns: " + SessionState.PipeSpawns + "\n")
-    // Msg("------------------------------\n")
 }
 
 function OnGameEvent_finale_start( params )
@@ -139,13 +101,25 @@ function OnGameEvent_gauntlet_finale_start( params )
     SessionState.IsFinale = true
 }
 
-MutationState <-
+InitialState <-
 {
     MolotovSpawns = 2
     Tier2Spawns = 2
     MedkitSpawns = 2
     PillSpawns = 5
     PipeSpawns = 3
+}
+
+MutationState <-
+{
+    DevMode = false
+    DevSaferoomExit = false
+    DevTicks = 0
+    MolotovSpawns = InitialState.MolotovSpawns
+    Tier2Spawns = InitialState.Tier2Spawns
+    MedkitSpawns = InitialState.MedkitSpawns
+    PillSpawns = InitialState.PillSpawns
+    PipeSpawns = InitialState.PipeSpawns
     IsFinale = false
     TankSpawnDelay = 0
     NextTankIsSpecial = false
@@ -192,7 +166,8 @@ if (!Director.IsSessionStartMap())
 
 function OnGameEvent_map_transition(params)
 {
-    SaveTable("consumables", {
+    SaveTable("savedState", {
+        DevMode = SessionState.DevMode,
         MolotovSpawns = SessionState.MolotovSpawns,
         MedkitSpawns = SessionState.MedkitSpawns,
         PillSpawns = SessionState.PillSpawns,
@@ -228,15 +203,27 @@ function OnTankDeath(infected)
 
     local spawnTable = { origin = infected.GetOrigin(), angles = infected.GetAngles().ToKVString() }
 
-    if(!SessionState.IsFinale && RandomInt(1, 10) <= 5)
+    if(!SessionState.IsFinale && RandomInt(1, 10) <= 5) {
         ZSpawn({ type = 11 })
+        DevPrint("\x03" + "[DEV] Killed " + "\x04" + "Tank" + "\x03" + " spawned " + "\x04" + "Witch Bride" + "\x03" + " for punishment.")
+    }
 
     if(!Director.IsTankInPlay() && SessionState.FlowTank.inPlay || SessionState.FlowTank.isSpawned) {
         SessionState.FlowTank.isSpawned = false
         SessionState.FlowTank.inPlay = false
+        DevPrint("\x03" + "[DEV] " + "\x04" + "Tank" + "\x03" + " no longer in play, restoring commons.")
     }
 
+    DevPrintRewards("Tank", ["MedkitSpawns", "MolotovSpawns", "PillSpawns"])
+
     SpawnTankItems(infected) // tank lets you double dip
+}
+
+function DevPrintRewards(type, rewards)
+{
+    DevPrint("\x03" + "[DEV] " + "\x04" + type + "\x03" + " killed, giving rewards:")
+    foreach(pt in rewards)
+        DevPrint("  " + "\x04" + pt + "\x01" + ": " + "\x05" + SessionState[pt] + "\x01" + " left.")
 }
 
 function OnWitchDeath(infected)
@@ -249,6 +236,10 @@ function OnWitchDeath(infected)
         SessionState.MedkitSpawns = SessionState.MedkitSpawns + 0.25
         SessionState.PillSpawns = SessionState.PillSpawns + 0.5
         SessionState.PipeSpawns = SessionState.PipeSpawns + 0.5
+
+        DevPrintRewards("Witch Bride", ["MedkitSpawns", "PillSpawns", "PipeSpawns"])
+    } else {
+        DevPrintRewards("Witch", ["PillSpawns", "PipeSpawns"])
     }
 
     SpawnWitchItems(infected)
@@ -258,6 +249,8 @@ function OnSpecialDeath(infected)
 {
     SessionState.PillSpawns = SessionState.PillSpawns + 0.25
     SessionState.PipeSpawns = SessionState.PipeSpawns + 0.5
+
+    DevPrintRewards("SI", ["PillSpawns", "PipeSpawns"])
 }
 
 function OnInfectedKilled(params)
@@ -448,32 +441,57 @@ function OnGameEvent_player_death(params)
 
 // }
 
-// function OnGameEvent_player_say(params){
+function DevPrint(message) {
+    if(!SessionState.DevMode)
+        return;
+    ClientPrint(null, DirectorScript.HUD_PRINTTALK, "\x01" + message);
+}
 
-//     local text,ent = null
+function ToggleDevMode()
+{
+    SessionState.DevMode = !SessionState.DevMode
+    ClientPrint(null, DirectorScript.HUD_PRINTTALK, "\x03" + "[DEV] Dev mode turned: " + (SessionState.DevMode ? "\x05" + "ON" : "\x04" + "OFF"))
+}
 
-//     if("userid" in params && params.userid == 0){
-//         return
-//     }
+function DevPrintSessionState()
+{
+    DevPrint("\x03" + "[DEV] Initial state:")
+    foreach(pt in ["MolotovSpawns", "Tier2Spawns", "MedkitSpawns", "PillSpawns", "PipeSpawns"])
+        DevPrint("  " + "\x04" + pt + "\x01" + ": " + "\x05" + InitialState[pt] + "\x01" + " + " + "\x05" + GetExtraConsumableLimits(pt) + "\x01" + " extra.")
 
-//     text = strip(params["text"].tolower())
-//     ent = GetPlayerFromUserID(params["userid"])
+    foreach(sp in MobSpawns.tanks)
+        DevPrint("  " + "\x04" + "Tank" + "\x01" + " at flow " + "\x05" + sp.flow + "%")
+}
 
-//     if(text.len() < 1){
-//         return
-//     }
+function OnGameEvent_player_say(params){
 
-//     local steamID = ent.GetNetworkIDString()
+    local text,ent = null
 
-//     switch(text){
-//         case "!save":
-//             SaveGameState();
-//             break;
-//         case "!restore":
-//             RestoreGameState();
-//             break;
-//     }
-// }
+    if("userid" in params && params.userid == 0){
+        return
+    }
+
+    text = strip(params["text"].tolower())
+    ent = GetPlayerFromUserID(params["userid"])
+
+    if(text.len() < 1){
+        return
+    }
+
+    local steamID = ent.GetNetworkIDString()
+
+    switch(text){
+        case "!dev":
+            ToggleDevMode()
+            break;
+        // case "!save":
+        //     SaveGameState();
+        //     break;
+        // case "!restore":
+        //     RestoreGameState();
+        //     break;
+    }
+}
 
 function OnGameEvent_tank_spawn(params)
 {
@@ -501,6 +519,9 @@ function OnGameEvent_tank_spawn(params)
         }
 
         tank.SetModel("models/infected/hulk_dlc3.mdl")
+        DevPrint("\x03" + "[DEV] Spawned " + "\x04" + "Mini-tank" + "\x03" + " with " + "\x04" + health + "\x03" + " HP.")
+    } else {
+        DevPrint("\x03" + "[DEV] Spawned " + "\x04" + "Tank" + "\x03" + " with " + "\x04" + health + "\x03" + " HP.")
     }
 
     tank.SetMaxHealth(maxHealth)
@@ -525,7 +546,12 @@ function OnGameEvent_spawner_give_item(params)
 
 function OnGameEvent_triggered_car_alarm( params )
 {
-    ZSpawn({ type = 8 })
+    DirectorOptions.cm_AggressiveSpecials = true;
+    ZSpawn( { type = 8 } );
+    DirectorOptions.cm_AggressiveSpecials = false;
+
+    StartAssault();
+    DevPrint("\x03" + "[DEV] Car alarm triggered, spawning " + "\x04" + "Tank" + "\x03" + ".")
 }
 
 ValidSpawns <-
@@ -571,6 +597,7 @@ function SpawnOnPoint(container, classname)
 
     SpawnEntityFromTable(classname, spawnpoint.spawnTable)
     spawnpoint.used = true
+    DevPrint("\x03 [DEV] Spawning reward " + "\x04" + classname + "\x03" + " at flow " + "\x04" + floor((spawnpoint.flow / GetMaxFlowDistance()) * 1000) / 10 + "\x03" + "%.")
 
     return true
 }
@@ -616,8 +643,6 @@ function ExponentialInterpolate(a, b, x, min_x, max_x) {
 
 function TickTankSupport()
 {
-    // Msg("[ATTRITION] Tank support: " + "isSpawned(" + SessionState.FlowTank.isSpawned + ") " + "inPlay(" + SessionState.FlowTank.inPlay + ") " + "flowMin(" + SessionState.FlowTank.flowMin + ") " + "flowMax(" + SessionState.FlowTank.flowMax + ") " + "\n")
-
     if(Director.IsTankInPlay())
     {
         if(!SessionState.FlowTank.isSpawned) {
@@ -627,7 +652,6 @@ function TickTankSupport()
         } else {
             local maxSurvivor = Director.GetHighestFlowSurvivor()
 
-
             local flow = (GetFlowDistanceForPosition(maxSurvivor ? maxSurvivor.GetOrigin() : Director.GetFurthestSurvivorFlow()) / GetMaxFlowDistance()) * 100
 
             if(!SessionState.FlowTank.inPlay) {
@@ -635,6 +659,7 @@ function TickTankSupport()
                 SessionState.FlowTank.flowMax = Min(flow + 20, 110)
                 SessionState.FlowTank.inPlay = true
                 SessionState.FlowTank.playedMegaMobSound = false
+                DevPrint("\x03" + "[DEV] " + "\x04" + "Tank" + "\x03" + " in play, reducing commons.")
             }
 
             local infected = ExponentialInterpolate(5, 50, flow, SessionState.FlowTank.flowMin, SessionState.FlowTank.flowMax)
@@ -643,6 +668,7 @@ function TickTankSupport()
                 SessionState.FlowTank.playedMegaMobSound = true
                 // Director.PlayMegaMobWarningSounds()
                 EntFire( "info_director", "ForcePanicEvent" );
+                DevPrint("\x03" + "[DEV] Players rushing " + "\x04" + "Tank" + "\x03" + " releasing a horde.")
             }
 
 
@@ -650,16 +676,23 @@ function TickTankSupport()
             DirectorOptions.MobMinSize = ceil(infected * 0.5)
             DirectorOptions.MobMaxSize = ceil(infected)
 
-            // Msg("[ATTRITION] Commons: " + infected + "\n")
+            if(SessionState.DevMode)
+            {
+                SessionState.DevTicks = SessionState.DevTicks - 1
+                if(SessionState.DevTicks <= 0)
+                {
+                    if(SessionState.FlowTank.inPlay)
+                    DevPrint("\x03" + "[DEV] " + "\x04" + "Tank" + "\x03" + " in play, limiting to " + "\x04" + floor(infected * 10) / 10 + "\x03" + " commons.")
+                    SessionState.DevTicks = 3
+                }
+            }
         }
-        // Msg("[ATTRITION] Reducing number of commons\n")
     }
     else
     {
         DirectorOptions.CommonLimit = 50
         DirectorOptions.MobMinSize = 25
         DirectorOptions.MobMaxSize = 50
-        // Msg("[ATTRITION] Restoring number of commons\n")
     }
 }
 
@@ -670,10 +703,8 @@ function TickTankFlow()
 
     local flow = (Director.GetFurthestSurvivorFlow() / GetMaxFlowDistance()) * 100
 
-    // Msg("[ATTRITION] Current flow " + flow + "\n")
     foreach(sp in MobSpawns.tanks)
     {
-        // Msg("[ATTRITION] Tank spawn @ " + sp.flow + " | used: " + sp.used + "\n")
         if(sp.used || sp.flow > flow) continue
 
         ZSpawn({ type = 8 })
@@ -686,10 +717,20 @@ function TickTankFlow()
     }
 }
 
+function DevTickSaferoomPrint()
+{
+    if(SessionState.DevSaferoomExit || !Director.HasAnySurvivorLeftSafeArea())
+        return
+
+    SessionState.DevSaferoomExit = true
+    DevPrintSessionState()
+}
+
 function Update()
 {
     TickTankSupport()
     TickTankFlow()
+    DevTickSaferoomPrint()
 }
 
 function SortSpawns(a, b)
@@ -839,6 +880,7 @@ function ModifyWeaponSpawns()
 }
 
 SavedState <- {
+    DevMode = 0,
     MolotovSpawns = 0,
     MedkitSpawns = 0,
     PillSpawns = 0,
@@ -865,12 +907,16 @@ function GetExtraConsumableLimits(savedKey)
 
 function RestoreConsumables()
 {
-    RestoreTable("consumables", SavedState)
+    RestoreTable("savedState", SavedState)
+    SessionState.DevMode = SavedState.DevMode
+
     foreach(sp in ["MolotovSpawns", "MedkitSpawns", "PillSpawns", "PipeSpawns"]) {
         local extra = GetExtraConsumableLimits(sp)
-        // Msg("[ATTRITION] Starting map with " + sp + " " + SessionState[sp] + " + " + extra + "\n")
+        Msg("[ATTRITION] Starting map with " + sp + " " + SessionState[sp] + " + " + extra + "\n")
         SessionState[sp] = SessionState[sp] + extra
     }
+
+    SessionState.DevMode = SavedState.DevMode
 }
 
 function OnGameEvent_round_start_post_nav(params) {
@@ -910,6 +956,7 @@ DirectorOptions <-
     MobMaxSize = 50
 
     cm_ShouldHurry = true
+    cm_AggressiveSpecials = false
 
     // convert items that aren't useful
     weaponsToConvert =
