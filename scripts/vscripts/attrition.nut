@@ -72,7 +72,7 @@ function SpawnOnPointOrInfected(classname, infected)
         }
 
         SpawnEntityFromTable(classname, spawnTable)
-        DevPrint("\x03 [DEV] Spawning reward " + "\x04" + classname + "\x03" + " at position " + "\x04" + spawnTable.origin + "\x03" + ".")
+        DevPrint("\x03" + "[DEV] Spawning reward " + "\x04" + classname + "\x03" + " at position " + "\x04" + spawnTable.origin + "\x03" + ".")
     }
 }
 
@@ -450,6 +450,13 @@ function DevPrint(message) {
 function ToggleDevMode()
 {
     SessionState.DevMode = !SessionState.DevMode
+    SaveTable("savedState", { // ensure that state is preserved during map reload
+        DevMode = SessionState.DevMode,
+        MolotovSpawns = SavedState.MolotovSpawns,
+        MedkitSpawns = SavedState.MedkitSpawns,
+        PillSpawns = SavedState.PillSpawns,
+        PipeSpawns = SavedState.PipeSpawns,
+    })
     ClientPrint(null, DirectorScript.HUD_PRINTTALK, "\x03" + "[DEV] Dev mode turned: " + (SessionState.DevMode ? "\x05" + "ON" : "\x04" + "OFF"))
 }
 
@@ -597,7 +604,7 @@ function SpawnOnPoint(container, classname)
 
     SpawnEntityFromTable(classname, spawnpoint.spawnTable)
     spawnpoint.used = true
-    DevPrint("\x03 [DEV] Spawning reward " + "\x04" + classname + "\x03" + " at flow " + "\x04" + floor((spawnpoint.flow / GetMaxFlowDistance()) * 1000) / 10 + "\x03" + "%.")
+    DevPrint("\x03" + "[DEV] Spawning reward " + "\x04" + classname + "\x03" + " at flow " + "\x04" + floor((spawnpoint.flow / GetMaxFlowDistance()) * 1000) / 10 + "\x03" + "%.")
 
     return true
 }
@@ -880,7 +887,7 @@ function ModifyWeaponSpawns()
 }
 
 SavedState <- {
-    DevMode = 0,
+    DevMode = false,
     MolotovSpawns = 0,
     MedkitSpawns = 0,
     PillSpawns = 0,
