@@ -364,82 +364,113 @@ function OnGameEvent_player_death(params)
 //     witch.SetHealth(health)
 // }
 
-// function CollectWeaponInfo(invTable)
-// {
-//     local wep
-//     local weapons = {
-//         slot0 = null
-//     }
+function CollectWeaponInfo(invTable)
+{
+    local wep
+    local weapons = {
+        slot0 = null, // primary
+        slot1 = null, // secondary
+        slot2 = null, // throwable
+        slot3 = null, // medkit
+        slot4 = null, // pills
+        slot5 = null, // carried item
+    }
 
-//     if("slot0" in invTable) {
-//         wep = invTable["slot0"]
+    if("slot0" in invTable) {
+        wep = invTable["slot0"]
 
-//         weapons["slot0"] = {
-//             type = wep.GetClassname(),
-//             clip1 = wep.Clip1(),
-//             clip2 = wep.Clip2(),
-//             ammo = NetProps.GetPropInt(wep, "m_iExtraPrimaryAmmo")
-//         }
-//     }
+        weapons["slot0"] = {
+            type = wep.GetClassname(),
+            clip1 = wep.Clip1(),
+            clip2 = wep.Clip2(),
+            ammo = NetProps.GetPropInt(wep, "m_iExtraPrimaryAmmo")
+        }
+    }
 
-//     return weapons
-// }
+    if("slot1" in invTable) {
+        wep = invTable["slot1"]
+        weapons["slot1"] = {
+            type = wep.GetClassname(),
+            model = wep.GetModelName() // for melee
+        }
+    }
 
-// function CollectPlayerInfo(player) {
-//     local invTable = {}
-//     GetInvTable(player, invTable)
+    foreach(k in ["slot2", "slot3", "slot4", "slot5"]) {
+        if(k in invTable) {
+            weapons[k] = invTable[k].GetClassname()
+        }
+    }
 
-//     return {
-//         model = player.GetModelName(),
-//         weapons = CollectWeaponInfo(invTable),
-//         health = {
-//             perm = player.GetHealth(),
-//             temp = player.GetHealthBuffer(),
-//             revives = NetProps.GetPropInt(player, "m_currentReviveCount")
-//         },
-//     }
-// }
+    return weapons
+}
 
-// function SaveGameState()
-// {
-//     local player = null
+function CollectPlayerAmmo(player)
+{
+    local ammo = []
 
-//     // Iterate through every player
-//     while(player = Entities.FindByClassname(player, "player"))
-//     {
-//         DumpObject(CollectPlayerInfo(player))
-//         // printl("Player: " + player.GetPlayerName())
+    for(local i = 0; i < NetProps.GetPropArraySize(player, "m_iAmmo"); i++)
+        ammo.append(NetProps.GetPropIntArray(player, "m_iAmmo", i))
 
-//         // printl("Modelname: " + player.GetModelName())
+    return ammo
+}
 
-//         // // Add an empty table to store the inventory in
-//         // local invTable = {}
+function CollectPlayerInfo(player) {
+    local invTable = {}
+    local arrAmmo = CollectPlayerAmmo(player)
+    GetInvTable(player, invTable)
 
-//         // // Call the function to fill the table
-//         // GetInvTable(player, invTable)
+    return {
+        model = player.GetModelName(),
+        weapons = CollectWeaponInfo(invTable),
+        ammo = arrAmmo,
+        health = {
+            perm = player.GetHealth(),
+            temp = player.GetHealthBuffer(),
+            revives = NetProps.GetPropInt(player, "m_currentReviveCount")
+        },
+    }
+}
 
-//         // // Check if the player has a primary weapon
-//         // if("slot0" in invTable)
-//         // {
-//         //     printl("Primary weapon equipped: " + invTable.slot0)
-//         // }
-//         // else
-//         // {
-//         //     printl("Primary weapon not equipped!")
-//         // }
+function SaveGameState()
+{
+    local player = null
 
-//         // // Print all equipped weapons
-//         // foreach(slot, weapon in invTable)
-//         // {
-//         //     printl("\t" + slot + "= " + weapon.GetClassname())
-//         // }
-//     }
-// }
+    // Iterate through every player
+    while(player = Entities.FindByClassname(player, "player"))
+    {
+        DumpObject(CollectPlayerInfo(player))
+        // printl("Player: " + player.GetPlayerName())
 
-// function RestoreGameState()
-// {
+        // printl("Modelname: " + player.GetModelName())
 
-// }
+        // // Add an empty table to store the inventory in
+        // local invTable = {}
+
+        // // Call the function to fill the table
+        // GetInvTable(player, invTable)
+
+        // // Check if the player has a primary weapon
+        // if("slot0" in invTable)
+        // {
+        //     printl("Primary weapon equipped: " + invTable.slot0)
+        // }
+        // else
+        // {
+        //     printl("Primary weapon not equipped!")
+        // }
+
+        // // Print all equipped weapons
+        // foreach(slot, weapon in invTable)
+        // {
+        //     printl("\t" + slot + "= " + weapon.GetClassname())
+        // }
+    }
+}
+
+function RestoreGameState()
+{
+
+}
 
 function DevPrint(message) {
     if(!SessionState.DevMode)
@@ -491,9 +522,9 @@ function OnGameEvent_player_say(params){
         case "!dev":
             ToggleDevMode()
             break;
-        // case "!save":
-        //     SaveGameState();
-        //     break;
+        case "!save":
+            SaveGameState();
+            break;
         // case "!restore":
         //     RestoreGameState();
         //     break;
@@ -690,6 +721,7 @@ function TickTankSupport()
                 {
                     if(SessionState.FlowTank.inPlay)
                     DevPrint("\x03" + "[DEV] " + "\x04" + "Tank" + "\x03" + " in play, limiting to " + "\x04" + floor(infected * 10) / 10 + "\x03" + " commons.")
+                    DevShowTankCommons(floor(infected * 10) / 10, 5, 50)
                     SessionState.DevTicks = 3
                 }
             }
@@ -701,6 +733,25 @@ function TickTankSupport()
         DirectorOptions.MobMinSize = 25
         DirectorOptions.MobMaxSize = 50
     }
+}
+
+TickerHUD <- {
+    slot = HUD_TICKER, name = ""
+}                                   // start with an empty HUD Table
+
+function DevShowTankCommons(curCommons, minCommons, maxCommons)
+{
+    local str = "["
+
+    for(local i = minCommons; i <= maxCommons; i = i + 1) {
+        str = str + (i <= curCommons ? "|" : ".")
+    }
+
+    str = str + "]"
+
+    Ticker_AddToHud( TickerHUD, str )            // add a ticker, defaulting to the empty string
+    HUDSetLayout( TickerHUD )                         // send this table (w/Ticker now) to start
+    HUDPlace( HUD_TICKER, 0.25, 0.04, 0.5, 0.04 )     // Move the Ticker from default to top of screen
 }
 
 function TickTankFlow()
